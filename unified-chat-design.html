@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Chat Design Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .controls {
+            background: #242424;
+            border-right: 1px solid #333;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 24px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group select,
+        .control-group input {
+            width: 100%;
+            padding: 8px 12px;
+            background: #333;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            font-size: 13px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .control-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .preset-btn {
+            padding: 8px 12px;
+            background: #333;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: #3d3d3d;
+            border-color: #666;
+        }
+
+        .preset-btn.active {
+            background: #4a9eff;
+            border-color: #4a9eff;
+        }
+
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .phone-frame {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+        }
+
+        .phone {
+            width: 375px;
+            height: 812px;
+            background: #000;
+            border-radius: 40px;
+            border: 12px solid #1a1a1a;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .notch {
+            height: 28px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            color: #000;
+            font-size: 14px;
+        }
+
+        .screen.dark {
+            background: #121212;
+            color: #e0e0e0;
+        }
+
+        .screen.dark .message {
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+
+        .screen.dark .message.user {
+            background: #0d47a1;
+            color: #fff;
+        }
+
+        .topbar {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f5f5f5;
+        }
+
+        .screen.dark .topbar {
+            background: #1e1e1e;
+            border-bottom-color: #333;
+        }
+
+        .topbar-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .topbar-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .screen.dark .icon-btn {
+            background: #333;
+            color: #e0e0e0;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message {
+            padding: 10px 12px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+            font-size: 13px;
+            background: #e0e0e0;
+            color: #000;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: #0d47a1;
+            color: #fff;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+        }
+
+        .message.thinking {
+            font-style: italic;
+            opacity: 0.7;
+        }
+
+        .quick-actions {
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            border-bottom: 1px solid #e0e0e0;
+            scroll-behavior: smooth;
+        }
+
+        .screen.dark .quick-actions {
+            border-bottom-color: #333;
+        }
+
+        .quick-action-chip {
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: #e0e0e0;
+            border: none;
+            font-size: 12px;
+            white-space: nowrap;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .quick-action-chip:hover {
+            background: #d0d0d0;
+        }
+
+        .screen.dark .quick-action-chip {
+            background: #333;
+            color: #e0e0e0;
+        }
+
+        .screen.dark .quick-action-chip:hover {
+            background: #444;
+        }
+
+        .input-area {
+            padding: 12px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            background: #f5f5f5;
+        }
+
+        .screen.dark .input-area {
+            background: #1e1e1e;
+            border-top-color: #333;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .screen.dark .input-field {
+            background: #333;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+
+        .input-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #0d47a1;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drawer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 70%;
+            height: 100%;
+            background: #f5f5f5;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+        }
+
+        .screen.dark .drawer {
+            background: #1e1e1e;
+        }
+
+        .drawer.open {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+        }
+
+        .screen.dark .drawer-header {
+            border-bottom-color: #333;
+        }
+
+        .drawer-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .screen.dark .drawer-item {
+            border-bottom-color: #333;
+        }
+
+        .drawer-item:hover {
+            background: #e0e0e0;
+        }
+
+        .screen.dark .drawer-item:hover {
+            background: #2a2a2a;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 20;
+        }
+
+        .modal-overlay.show {
+            display: block;
+        }
+
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-radius: 16px 16px 0 0;
+            z-index: 30;
+            max-height: 60%;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+
+        .screen.dark .bottom-sheet {
+            background: #2a2a2a;
+        }
+
+        .bottom-sheet.show {
+            transform: translateY(0);
+        }
+
+        .sheet-handle {
+            height: 4px;
+            width: 40px;
+            background: #ccc;
+            border-radius: 2px;
+            margin: 8px auto;
+        }
+
+        .screen.dark .sheet-handle {
+            background: #444;
+        }
+
+        .sheet-content {
+            padding: 16px;
+        }
+
+        .sheet-item {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+
+        .screen.dark .sheet-item {
+            border-bottom-color: #333;
+        }
+
+        .prompt-output {
+            background: #242424;
+            border-top: 1px solid #333;
+            padding: 16px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            color: #4a9eff;
+            line-height: 1.5;
+            max-height: 200px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .prompt-text {
+            flex: 1;
+        }
+
+        .copy-btn {
+            padding: 6px 12px;
+            background: #4a9eff;
+            border: none;
+            color: #000;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+            margin-left: 12px;
+            flex-shrink: 0;
+        }
+
+        .copy-btn:hover {
+            background: #5aadff;
+        }
+
+        .copy-btn.copied {
+            background: #4caf50;
+            color: #fff;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h2 style="margin-bottom: 20px; font-size: 16px;">Unified Chat Design</h2>
+
+        <div class="control-group">
+            <label>Layout Style</label>
+            <select id="layoutStyle">
+                <option value="chat-focused">Chat Focused (messages + input)</option>
+                <option value="quick-actions-top">Quick Actions Top</option>
+                <option value="quick-actions-bottom">Quick Actions Bottom</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Theme</label>
+            <select id="themeSelect">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Input Bar Style</label>
+            <select id="inputStyle">
+                <option value="simple">Text only</option>
+                <option value="with-icons">Text + Voice + Attach icons</option>
+                <option value="with-actions">Text + Quick action picker</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Navigation Drawer</label>
+            <select id="drawerMode">
+                <option value="hidden">Hidden (swipe to open)</option>
+                <option value="open">Open (side drawer visible)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Show Overlays</label>
+            <div class="checkbox-label">
+                <input type="checkbox" id="showQuickActions" checked>
+                <span>Quick action chips</span>
+            </div>
+            <div class="checkbox-label">
+                <input type="checkbox" id="showModelPicker">
+                <span>Model picker (bottom sheet)</span>
+            </div>
+            <div class="checkbox-label">
+                <input type="checkbox" id="showDrawer">
+                <span>Navigation drawer</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Preset Designs</label>
+            <div class="preset-buttons">
+                <button class="preset-btn active" onclick="applyPreset('gemini-like')">Gemini-like</button>
+                <button class="preset-btn" onclick="applyPreset('minimal')">Minimal</button>
+                <button class="preset-btn" onclick="applyPreset('feature-rich')">Feature Rich</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="preview-container">
+        <div class="phone-frame">
+            <div class="phone">
+                <div class="notch"></div>
+                <div class="screen" id="screen">
+                    <div class="topbar">
+                        <span class="topbar-title">New Chat</span>
+                        <div class="topbar-buttons">
+                            <button class="icon-btn" onclick="toggleDrawer()">☰</button>
+                            <button class="icon-btn" onclick="toggleModelPicker()">⚙️</button>
+                        </div>
+                    </div>
+
+                    <div class="quick-actions" id="quickActionsTop">
+                        <button class="quick-action-chip">📋 Tasks</button>
+                        <button class="quick-action-chip">✈️ Trip</button>
+                        <button class="quick-action-chip">📝 Notes</button>
+                        <button class="quick-action-chip">📁 Files</button>
+                        <button class="quick-action-chip">🔍 Search</button>
+                    </div>
+
+                    <div class="messages" id="messages">
+                        <div class="message assistant">Hi! I'm your AI assistant. What can I help you with today?</div>
+                        <div class="message user">What are my upcoming tasks?</div>
+                        <div class="message assistant">Let me check your tasks...</div>
+                        <div class="message thinking">🔄 Fetching task list...</div>
+                    </div>
+
+                    <div class="quick-actions" id="quickActionsBottom"></div>
+
+                    <div class="input-area">
+                        <input type="text" class="input-field" placeholder="Ask me anything...">
+                        <button class="input-btn">🎤</button>
+                        <button class="input-btn">📎</button>
+                        <button class="input-btn">➤</button>
+                    </div>
+
+                    <div class="modal-overlay" id="modalOverlay"></div>
+
+                    <div class="drawer" id="drawer">
+                        <div class="drawer-header">Conversations</div>
+                        <div class="drawer-item">+ New Chat</div>
+                        <div class="drawer-item">Today's Tasks</div>
+                        <div class="drawer-item">Trip Planning</div>
+                        <div class="drawer-item">Project Ideas</div>
+                        <div class="drawer-item">Settings</div>
+                    </div>
+
+                    <div class="bottom-sheet" id="modelSheet">
+                        <div class="sheet-handle"></div>
+                        <div class="sheet-content">
+                            <h4 style="margin-bottom: 12px;">Select Model</h4>
+                            <div class="sheet-item">Gemini 2.0 Flash (Cloud)</div>
+                            <div class="sheet-item">Gemma 2B (Local)</div>
+                            <div class="sheet-item">Gemma 7B (Local)</div>
+                            <div class="sheet-item">Settings...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="prompt-output">
+            <div class="prompt-text" id="promptText">Select design options to generate a specification prompt...</div>
+            <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy</button>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            layoutStyle: 'chat-focused',
+            theme: 'light',
+            inputStyle: 'with-icons',
+            drawerMode: 'hidden',
+            showQuickActions: true,
+            showModelPicker: false,
+            showDrawer: false,
+        };
+
+        const defaults = { ...state };
+
+        function updateAll() {
+            renderLayout();
+            updatePrompt();
+        }
+
+        function renderLayout() {
+            const screen = document.getElementById('screen');
+            const isDark = state.theme === 'dark';
+
+            screen.classList.toggle('dark', isDark);
+
+            // Quick actions position
+            const topActions = document.getElementById('quickActionsTop');
+            const bottomActions = document.getElementById('quickActionsBottom');
+
+            if (state.layoutStyle === 'quick-actions-bottom') {
+                topActions.style.display = 'none';
+                bottomActions.style.display = 'flex';
+                bottomActions.innerHTML = `
+                    <button class="quick-action-chip">📋 Tasks</button>
+                    <button class="quick-action-chip">✈️ Trip</button>
+                    <button class="quick-action-chip">📝 Notes</button>
+                    <button class="quick-action-chip">📁 Files</button>
+                `;
+            } else {
+                topActions.style.display = state.showQuickActions ? 'flex' : 'none';
+                bottomActions.style.display = 'none';
+            }
+
+            // Drawer
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('modalOverlay');
+            drawer.classList.toggle('open', state.showDrawer);
+            overlay.classList.toggle('show', state.showDrawer);
+
+            // Model picker sheet
+            const modelSheet = document.getElementById('modelSheet');
+            modelSheet.classList.toggle('show', state.showModelPicker);
+            overlay.classList.toggle('show', state.showModelPicker || state.showDrawer);
+        }
+
+        function updatePrompt() {
+            const parts = [];
+
+            if (state.layoutStyle !== defaults.layoutStyle) {
+                const layouts = {
+                    'chat-focused': 'chat-focused layout with messages consuming most screen',
+                    'quick-actions-top': 'quick action chips positioned above messages',
+                    'quick-actions-bottom': 'quick action chips positioned below messages'
+                };
+                parts.push(layouts[state.layoutStyle]);
+            }
+
+            if (state.theme !== defaults.theme) {
+                parts.push(`${state.theme} theme`);
+            }
+
+            if (state.inputStyle !== defaults.inputStyle) {
+                const inputs = {
+                    'simple': 'simple text input',
+                    'with-icons': 'input with voice, attachment, and send icons',
+                    'with-actions': 'input with quick action picker'
+                };
+                parts.push(inputs[state.inputStyle]);
+            }
+
+            if (state.showDrawer) {
+                parts.push('navigation drawer open on left side');
+            }
+
+            if (state.showModelPicker) {
+                parts.push('model picker bottom sheet visible');
+            }
+
+            if (!state.showQuickActions) {
+                parts.push('no quick action chips visible');
+            }
+
+            const promptText = parts.length > 0
+                ? `Design the unified chat screen with: ${parts.join(', ')}.`
+                : 'This is the default unified chat layout: conversation-focused single screen with optional quick actions, drawer navigation, and bottom sheet overlays.';
+
+            document.getElementById('promptText').textContent = promptText;
+        }
+
+        function toggleDrawer() {
+            state.showDrawer = !state.showDrawer;
+            renderLayout();
+        }
+
+        function toggleModelPicker() {
+            state.showModelPicker = !state.showModelPicker;
+            renderLayout();
+        }
+
+        function applyPreset(preset) {
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const presets = {
+                'gemini-like': {
+                    layoutStyle: 'chat-focused',
+                    theme: 'light',
+                    inputStyle: 'with-icons',
+                    showQuickActions: true,
+                    showDrawer: false,
+                    showModelPicker: false,
+                },
+                'minimal': {
+                    layoutStyle: 'chat-focused',
+                    theme: 'dark',
+                    inputStyle: 'simple',
+                    showQuickActions: false,
+                    showDrawer: false,
+                    showModelPicker: false,
+                },
+                'feature-rich': {
+                    layoutStyle: 'quick-actions-top',
+                    theme: 'dark',
+                    inputStyle: 'with-actions',
+                    showQuickActions: true,
+                    showDrawer: false,
+                    showModelPicker: false,
+                },
+            };
+
+            Object.assign(state, presets[preset]);
+            updateFormControls();
+            updateAll();
+        }
+
+        function updateFormControls() {
+            document.getElementById('layoutStyle').value = state.layoutStyle;
+            document.getElementById('themeSelect').value = state.theme;
+            document.getElementById('inputStyle').value = state.inputStyle;
+            document.getElementById('showQuickActions').checked = state.showQuickActions;
+            document.getElementById('showModelPicker').checked = state.showModelPicker;
+            document.getElementById('showDrawer').checked = state.showDrawer;
+        }
+
+        function copyPrompt() {
+            const text = document.getElementById('promptText').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.classList.add('copied');
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+
+        // Event listeners
+        document.getElementById('layoutStyle').addEventListener('change', (e) => {
+            state.layoutStyle = e.target.value;
+            updateAll();
+        });
+
+        document.getElementById('themeSelect').addEventListener('change', (e) => {
+            state.theme = e.target.value;
+            updateAll();
+        });
+
+        document.getElementById('inputStyle').addEventListener('change', (e) => {
+            state.inputStyle = e.target.value;
+            updateAll();
+        });
+
+        document.getElementById('showQuickActions').addEventListener('change', (e) => {
+            state.showQuickActions = e.target.checked;
+            updateAll();
+        });
+
+        document.getElementById('showModelPicker').addEventListener('change', (e) => {
+            state.showModelPicker = e.target.checked;
+            updateAll();
+        });
+
+        document.getElementById('showDrawer').addEventListener('change', (e) => {
+            state.showDrawer = e.target.checked;
+            updateAll();
+        });
+
+        document.getElementById('modalOverlay').addEventListener('click', () => {
+            state.showDrawer = false;
+            state.showModelPicker = false;
+            updateAll();
+        });
+
+        // Initial render
+        updateAll();
+    </script>
+</body>
+</html>

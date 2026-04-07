@@ -1,0 +1,1 @@
+-keep,allowobfuscation,allowshrinking class com.openclaw.ai.ui.voice.VoiceViewModel

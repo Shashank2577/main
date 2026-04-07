@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Chat Navigation Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .sidebar {
+            background: #242424;
+            border-right: 1px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            color: #999;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-option {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #333;
+            border: 2px solid #333;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .nav-option:hover {
+            background: #3d3d3d;
+        }
+
+        .nav-option.active {
+            background: #4a9eff;
+            border-color: #4a9eff;
+            color: #000;
+            font-weight: 600;
+        }
+
+        .description {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .phone-frame {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+        }
+
+        .phone {
+            width: 375px;
+            height: 812px;
+            background: #000;
+            border-radius: 40px;
+            border: 12px solid #1a1a1a;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .notch {
+            height: 28px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+            color: #000;
+            font-size: 13px;
+            position: relative;
+        }
+
+        .topbar {
+            padding: 12px 16px;
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .topbar-title {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .topbar-right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message {
+            padding: 10px 12px;
+            border-radius: 12px;
+            max-width: 80%;
+            font-size: 12px;
+            background: #e0e0e0;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: #0d47a1;
+            color: #fff;
+        }
+
+        .quick-actions {
+            padding: 8px 12px;
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .chip {
+            padding: 6px 12px;
+            border-radius: 16px;
+            background: #e0e0e0;
+            border: none;
+            font-size: 11px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .input-bar {
+            padding: 12px;
+            background: #f5f5f5;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .icon-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #0d47a1;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Option A: Left Drawer */
+        .drawer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 65%;
+            height: 100%;
+            background: #f5f5f5;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+        }
+
+        .drawer.open {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 16px;
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .drawer-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .drawer-item:hover {
+            background: #e0e0e0;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 5;
+            display: none;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        /* Option B: Bottom Sheets */
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-radius: 16px 16px 0 0;
+            z-index: 20;
+            max-height: 50%;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+
+        .bottom-sheet.show {
+            transform: translateY(0);
+        }
+
+        .sheet-handle {
+            height: 4px;
+            width: 40px;
+            background: #ccc;
+            border-radius: 2px;
+            margin: 8px auto;
+        }
+
+        .sheet-content {
+            padding: 16px;
+        }
+
+        .sheet-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .sheet-item {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+
+        /* Option C: Bottom Tabs */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            z-index: 10;
+        }
+
+        .nav-tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            border-top: 3px solid transparent;
+        }
+
+        .nav-tab.active {
+            color: #0d47a1;
+            border-top-color: #0d47a1;
+        }
+
+        /* Option D: Top dropdowns */
+        .dropdown-menu {
+            position: absolute;
+            top: 44px;
+            right: 16px;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            z-index: 15;
+            min-width: 180px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: scaleY(0);
+            transform-origin: top right;
+            transition: transform 0.2s;
+        }
+
+        .dropdown-menu.show {
+            transform: scaleY(1);
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .dropdown-item:hover {
+            background: #f0f0f0;
+        }
+
+        .info-panel {
+            background: #242424;
+            border-top: 1px solid #333;
+            padding: 16px;
+            font-size: 12px;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .info-title {
+            color: #4a9eff;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .pros, .cons {
+            margin-bottom: 12px;
+        }
+
+        .pros::before {
+            content: "✓ Pros: ";
+            color: #4caf50;
+            font-weight: 600;
+        }
+
+        .cons::before {
+            content: "✗ Cons: ";
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Navigation Patterns</h2>
+
+        <div class="nav-option active" onclick="selectOption('A')">
+            <div>A: Left Drawer</div>
+            <div class="description">Hamburger menu slides in drawer with spaces, history, settings</div>
+        </div>
+
+        <div class="nav-option" onclick="selectOption('B')">
+            <div>B: Bottom Sheets</div>
+            <div class="description">Top bar buttons open overlay sheets for spaces, history, settings</div>
+        </div>
+
+        <div class="nav-option" onclick="selectOption('C')">
+            <div>C: Bottom Tabs</div>
+            <div class="description">Bottom navigation bar switches between Chat, Spaces, History, Settings</div>
+        </div>
+
+        <div class="nav-option" onclick="selectOption('D')">
+            <div>D: Top Dropdowns</div>
+            <div class="description">Dropdown menus in top bar for navigation, minimal UI footprint</div>
+        </div>
+    </div>
+
+    <div class="preview-container">
+        <div class="phone-frame">
+            <div class="phone">
+                <div class="notch"></div>
+                <div class="screen" id="screen">
+                    <!-- Option A: Left Drawer -->
+                    <div id="option-a" style="display: contents;">
+                        <div class="topbar">
+                            <div class="topbar-left">
+                                <button class="btn-small" onclick="toggleDrawer()">☰</button>
+                                <span class="topbar-title">New Chat</span>
+                            </div>
+                            <div class="topbar-right">
+                                <button class="btn-small" onclick="toggleSheet('model')">⚙️</button>
+                            </div>
+                        </div>
+
+                        <div class="quick-actions">
+                            <button class="chip">📋 Tasks</button>
+                            <button class="chip">✈️ Trip</button>
+                            <button class="chip">📝 Notes</button>
+                            <button class="chip">📁 Files</button>
+                        </div>
+
+                        <div class="messages">
+                            <div class="message">Hi! What can I help you with?</div>
+                            <div class="message user">Show my tasks</div>
+                            <div class="message">Let me fetch your tasks...</div>
+                        </div>
+
+                        <div class="input-bar">
+                            <input type="text" class="input-field" placeholder="Ask me anything...">
+                            <button class="icon-btn">🎤</button>
+                            <button class="icon-btn">➤</button>
+                        </div>
+
+                        <div class="overlay" id="overlay-a"></div>
+                        <div class="drawer" id="drawer-a">
+                            <div class="drawer-header">Conversations</div>
+                            <div class="drawer-item">+ New Chat</div>
+                            <div class="drawer-item">Today's Tasks</div>
+                            <div class="drawer-item">Trip to Tokyo</div>
+                            <div class="drawer-item" style="border-top: 1px solid #ccc; margin-top: 8px;">Spaces</div>
+                            <div class="drawer-item" style="padding-left: 24px;">📁 Work</div>
+                            <div class="drawer-item" style="padding-left: 24px;">📁 Personal</div>
+                            <div class="drawer-item" style="border-top: 1px solid #ccc; margin-top: 8px;">Settings</div>
+                        </div>
+                    </div>
+
+                    <!-- Option B: Bottom Sheets -->
+                    <div id="option-b" style="display: none; contents;">
+                        <div class="topbar">
+                            <div class="topbar-left">
+                                <span class="topbar-title">New Chat</span>
+                            </div>
+                            <div class="topbar-right">
+                                <button class="btn-small" onclick="toggleSheet('spaces')">📁</button>
+                                <button class="btn-small" onclick="toggleSheet('history')">📜</button>
+                                <button class="btn-small" onclick="toggleSheet('model')">⚙️</button>
+                            </div>
+                        </div>
+
+                        <div class="quick-actions">
+                            <button class="chip">📋 Tasks</button>
+                            <button class="chip">✈️ Trip</button>
+                            <button class="chip">📝 Notes</button>
+                            <button class="chip">📁 Files</button>
+                        </div>
+
+                        <div class="messages">
+                            <div class="message">Hi! What can I help you with?</div>
+                            <div class="message user">Show my tasks</div>
+                            <div class="message">Let me fetch your tasks...</div>
+                        </div>
+
+                        <div class="input-bar">
+                            <input type="text" class="input-field" placeholder="Ask me anything...">
+                            <button class="icon-btn">🎤</button>
+                            <button class="icon-btn">➤</button>
+                        </div>
+
+                        <div class="overlay" id="overlay-b"></div>
+                        <div class="bottom-sheet" id="sheet-spaces">
+                            <div class="sheet-handle"></div>
+                            <div class="sheet-content">
+                                <div class="sheet-title">Spaces</div>
+                                <div class="sheet-item">📁 Work</div>
+                                <div class="sheet-item">📁 Personal</div>
+                                <div class="sheet-item">+ Create space</div>
+                            </div>
+                        </div>
+
+                        <div class="bottom-sheet" id="sheet-history">
+                            <div class="sheet-handle"></div>
+                            <div class="sheet-content">
+                                <div class="sheet-title">Conversation History</div>
+                                <div class="sheet-item">Today's Tasks</div>
+                                <div class="sheet-item">Trip to Tokyo</div>
+                                <div class="sheet-item">Project Ideas</div>
+                                <div class="sheet-item">+ New Chat</div>
+                            </div>
+                        </div>
+
+                        <div class="bottom-sheet" id="sheet-model">
+                            <div class="sheet-handle"></div>
+                            <div class="sheet-content">
+                                <div class="sheet-title">Model & Settings</div>
+                                <div class="sheet-item">Gemini 2.0 Flash (Cloud)</div>
+                                <div class="sheet-item">Gemma 2B (Local)</div>
+                                <div class="sheet-item">Settings...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option C: Bottom Tabs -->
+                    <div id="option-c" style="display: none; contents;">
+                        <div class="topbar">
+                            <div class="topbar-left">
+                                <span class="topbar-title">Chat</span>
+                            </div>
+                        </div>
+
+                        <div class="quick-actions">
+                            <button class="chip">📋 Tasks</button>
+                            <button class="chip">✈️ Trip</button>
+                            <button class="chip">📝 Notes</button>
+                            <button class="chip">📁 Files</button>
+                        </div>
+
+                        <div class="messages">
+                            <div class="message">Hi! What can I help you with?</div>
+                            <div class="message user">Show my tasks</div>
+                            <div class="message">Let me fetch your tasks...</div>
+                        </div>
+
+                        <div class="input-bar">
+                            <input type="text" class="input-field" placeholder="Ask me anything...">
+                            <button class="icon-btn">🎤</button>
+                            <button class="icon-btn">➤</button>
+                        </div>
+
+                        <div class="bottom-nav">
+                            <div class="nav-tab active">💬 Chat</div>
+                            <div class="nav-tab">📁 Spaces</div>
+                            <div class="nav-tab">📜 History</div>
+                            <div class="nav-tab">⚙️ Settings</div>
+                        </div>
+                    </div>
+
+                    <!-- Option D: Top Dropdowns -->
+                    <div id="option-d" style="display: none; contents;">
+                        <div class="topbar">
+                            <div class="topbar-left">
+                                <button class="btn-small" onclick="toggleDropdown()">📁 Spaces ▼</button>
+                                <button class="btn-small" onclick="toggleDropdown()" style="margin-left: 8px;">📜 History ▼</button>
+                            </div>
+                            <div class="topbar-right">
+                                <button class="btn-small" onclick="toggleDropdown()">⚙️</button>
+                            </div>
+                        </div>
+
+                        <div class="quick-actions">
+                            <button class="chip">📋 Tasks</button>
+                            <button class="chip">✈️ Trip</button>
+                            <button class="chip">📝 Notes</button>
+                            <button class="chip">📁 Files</button>
+                        </div>
+
+                        <div class="messages">
+                            <div class="message">Hi! What can I help you with?</div>
+                            <div class="message user">Show my tasks</div>
+                            <div class="message">Let me fetch your tasks...</div>
+                        </div>
+
+                        <div class="input-bar">
+                            <input type="text" class="input-field" placeholder="Ask me anything...">
+                            <button class="icon-btn">🎤</button>
+                            <button class="icon-btn">➤</button>
+                        </div>
+
+                        <div class="dropdown-menu" id="dropdown">
+                            <div class="dropdown-item">Work Space</div>
+                            <div class="dropdown-item">Personal Space</div>
+                            <div class="dropdown-item">Create Space</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel" id="info">
+            <div class="info-title">Option A: Left Drawer</div>
+            <div class="pros">Hamburger menu opens left drawer with all navigation. Matches Google Gemini aesthetic.</div>
+            <div class="cons">Requires gesture/tap to discover. Drawer hides when tapped outside.</div>
+        </div>
+    </div>
+
+    <script>
+        let currentOption = 'A';
+
+        function selectOption(option) {
+            currentOption = option;
+
+            // Hide all options
+            document.getElementById('option-a').style.display = 'none';
+            document.getElementById('option-b').style.display = 'none';
+            document.getElementById('option-c').style.display = 'none';
+            document.getElementById('option-d').style.display = 'none';
+
+            // Show selected option
+            document.getElementById(`option-${option.toLowerCase()}`).style.display = 'contents';
+
+            // Update active nav option
+            document.querySelectorAll('.nav-option').forEach(opt => opt.classList.remove('active'));
+            event.target.closest('.nav-option').classList.add('active');
+
+            // Update info panel
+            const info = {
+                A: {
+                    title: 'Option A: Left Drawer',
+                    pros: 'Hamburger menu opens left drawer with all navigation (spaces, history, settings). Matches Google Gemini aesthetic. Clean, minimalist.',
+                    cons: 'Requires gesture/tap to discover. Drawer hides when overlay tapped. May need user education.'
+                },
+                B: {
+                    title: 'Option B: Bottom Sheets',
+                    pros: 'Three separate buttons in top bar for Spaces, History, Settings. Each opens its own bottom sheet. Mobile-friendly, no gestures.',
+                    cons: 'More button real estate in top bar. Users must learn three buttons. Slightly more taps to navigate.'
+                },
+                C: {
+                    title: 'Option C: Bottom Tabs',
+                    pros: 'Bottom navigation bar (standard Android pattern). Always visible. Easy discovery. Tab switches context.',
+                    cons: 'Breaks the "unified chat" concept. Takes up space at bottom. Less conversation focus.'
+                },
+                D: {
+                    title: 'Option D: Top Dropdowns',
+                    pros: 'Minimal UI footprint. Dropdowns in top bar. Compact, no extra navigation bar.',
+                    cons: 'Dropdown menus are less discoverable. Hard to see multiple dropdowns at once. Not mobile-optimized.'
+                }
+            };
+
+            document.getElementById('info').innerHTML = `
+                <div class="info-title">${info[option].title}</div>
+                <div class="pros">${info[option].pros}</div>
+                <div class="cons">${info[option].cons}</div>
+            `;
+
+            // Close any open overlays
+            closeAllOverlays();
+        }
+
+        function toggleDrawer() {
+            const drawer = document.getElementById('drawer-a');
+            const overlay = document.getElementById('overlay-a');
+            drawer.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+
+        function toggleSheet(sheet) {
+            const element = document.getElementById(`sheet-${sheet}`);
+            const overlay = document.getElementById('overlay-b');
+            if (element) {
+                element.classList.toggle('show');
+                overlay.classList.toggle('show');
+            }
+        }
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function closeAllOverlays() {
+            document.querySelectorAll('[id^="overlay-"]').forEach(el => el.classList.remove('show'));
+            document.querySelectorAll('[id^="drawer-"]').forEach(el => el.classList.remove('open'));
+            document.querySelectorAll('[id^="sheet-"]').forEach(el => el.classList.remove('show'));
+            document.getElementById('dropdown').classList.remove('show');
+        }
+
+        // Initialize
+        selectOption('A');
+    </script>
+</body>
+</html>
