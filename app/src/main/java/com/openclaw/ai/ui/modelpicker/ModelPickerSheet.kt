@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.openclaw.ai.data.*
+import com.openclaw.ai.data.Model
+import com.openclaw.ai.data.ModelDownloadStatus
 import com.openclaw.ai.data.ModelDownloadStatusType.*
 import com.openclaw.ai.ui.theme.*
 
@@ -70,7 +71,7 @@ fun ModelPickerSheet(
                     ModelItem(
                         model = model,
                         isActive = model.name == activeModelId,
-                        downloadStatus = downloadStatuses[model.name] ?: ModelDownloadStatus(NOT_DOWNLOADED),
+                        downloadStatus = downloadStatuses[model.name] ?: ModelDownloadStatus(status = NOT_DOWNLOADED),
                         downloadProgress = downloadProgress[model.name] ?: 0f,
                         onSelect = {
                             viewModel.selectModel(model.name)
@@ -91,7 +92,7 @@ fun ModelPickerSheet(
                     ModelItem(
                         model = model,
                         isActive = model.name == activeModelId,
-                        downloadStatus = ModelDownloadStatus(SUCCEEDED),
+                        downloadStatus = ModelDownloadStatus(status = SUCCEEDED),
                         downloadProgress = 0f,
                         onSelect = {
                             viewModel.selectModel(model.name)

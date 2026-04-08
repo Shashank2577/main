@@ -79,6 +79,10 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    fun goToStep(step: Int) {
+        _uiState.update { it.copy(currentStep = step) }
+    }
+
     fun startModelDownload() {
         val model = _uiState.value.selectedLocalModel ?: return
         viewModelScope.launch {
@@ -88,6 +92,10 @@ class OnboardingViewModel @Inject constructor(
 
     fun skipModelDownload() {
         nextStep()
+    }
+
+    fun skipCloudSetup() {
+        completeOnboarding()
     }
 
     fun onApiKeyChange(key: String) {

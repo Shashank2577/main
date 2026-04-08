@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,7 +77,7 @@ fun ModelDownloadStep(
             )
         }
 
-        Gemma4ModelCard(
+        GemmaModelCard(
             isDownloading = isDownloading,
             downloadProgress = downloadProgress,
             onDownload = onDownload,
@@ -101,7 +100,7 @@ fun ModelDownloadStep(
 }
 
 @Composable
-private fun Gemma4ModelCard(
+private fun GemmaModelCard(
     isDownloading: Boolean,
     downloadProgress: Float,
     onDownload: () -> Unit,
@@ -143,7 +142,7 @@ private fun Gemma4ModelCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = "Gemma 4",
+                    text = "Gemma 3n",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -153,7 +152,7 @@ private fun Gemma4ModelCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "2B · 1.4 GB",
+                        text = "2B · 3.1 GB",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -191,9 +190,9 @@ private fun Gemma4ModelCard(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     val pct = (downloadProgress * 100).roundToInt()
-                    val downloadedMb = (downloadProgress * 1433.6f).roundToInt()
+                    val downloadedMb = (downloadProgress * 3100).roundToInt()
                     Text(
-                        text = "$pct% · $downloadedMb MB / 1.4 GB",
+                        text = "$pct% · $downloadedMb MB / 3.1 GB",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -203,8 +202,7 @@ private fun Gemma4ModelCard(
                         progress = { downloadProgress },
                         modifier = Modifier.fillMaxWidth(),
                         color = Purple600,
-                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        strokeCap = StrokeCap.Round,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
             } else {

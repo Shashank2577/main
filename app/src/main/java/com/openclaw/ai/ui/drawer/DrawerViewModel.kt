@@ -7,12 +7,7 @@ import com.openclaw.ai.data.db.entity.SpaceEntity
 import com.openclaw.ai.data.repository.ConversationRepository
 import com.openclaw.ai.data.repository.SpaceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,74 +17,54 @@ class DrawerViewModel @Inject constructor(
     private val spaceRepository: SpaceRepository,
 ) : ViewModel() {
 
-    private val _currentSpaceId = MutableStateFlow("")
-    val currentSpaceId: StateFlow<String> = _currentSpaceId.asStateFlow()
-
-    private val _currentConversationId = MutableStateFlow<String?>(null)
-    val currentConversationId: StateFlow<String?> = _currentConversationId.asStateFlow()
-
-    val spaces: StateFlow<List<SpaceEntity>> = spaceRepository.getAllSpaces()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList(),
-        )
-
-    val conversations: StateFlow<List<ConversationEntity>> = _currentSpaceId
-        .flatMapLatest { spaceId ->
-            if (spaceId.isNotEmpty()) {
-                conversationRepository.getConversationsBySpace(spaceId)
-            } else {
-                kotlinx.coroutines.flow.flowOf(emptyList())
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList(),
-        )
+    private val _uiState = MutableStateFlow(DrawerUiState())
+    val uiState: StateFlow<DrawerUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val defaultSpace = spaceRepository.ensureDefaultSpace()
-            _currentSpaceId.value = defaultSpace.id
+            spaceRepository.getAllSpaces().collect { spaces ->
+                _uiState.update { it.copy(spaces = spaces) }
+                if (spaces.isNotEmpty() && _uiState.value.currentSpaceId == null) {
+                    _uiState.update { it.copy(currentSpaceId = spaces.first().id) }
+                }
+            }
         }
-    }
 
-    fun loadConversationsForSpace(spaceId: String) {
-        _currentSpaceId.value = spaceId
-    }
-
-    fun switchSpace(spaceId: String) {
-        _currentSpaceId.value = spaceId
-        _currentConversationId.value = null
-    }
-
-    fun setCurrentConversation(conversationId: String?) {
-        _currentConversationId.value = conversationId
-    }
-
-    suspend fun createNewChat(): ConversationEntity {
-        val spaceId = _currentSpaceId.value.ifEmpty {
-            spaceRepository.ensureDefaultSpace().id.also { _currentSpaceId.value = it }
-        }
-        val conversation = conversationRepository.createConversation(spaceId = spaceId)
-        _currentConversationId.value = conversation.id
-        return conversation
-    }
-
-    fun deleteConversation(id: String) {
         viewModelScope.launch {
-            conversationRepository.deleteConversation(id)
-            if (_currentConversationId.value == id) {
-                _currentConversationId.value = null
+            _uiState.map { it.currentSpaceId }.distinctUntilChanged().collectLatest { spaceId ->
+                if (spaceId != null) {
+                    conversationRepository.getConversations(spaceId).collect { conversations ->
+                        _uiState.update { it.copy(conversations = conversations) }
+                    }
+                }
             }
         }
     }
 
-    fun createSpace(name: String, emoji: String) {
+    fun switchSpace(spaceId: String) {
+        _uiState.update { it.copy(currentSpaceId = spaceId) }
+    }
+
+    fun createNewChat() {
+        val spaceId = _uiState.value.currentSpaceId ?: return
         viewModelScope.launch {
-            spaceRepository.createSpace(name = name, emoji = emoji)
+            conversationRepository.createConversation(spaceId, "New Chat")
         }
     }
+
+    fun createSpace(name: String) {
+        viewModelScope.launch {
+            spaceRepository.createSpace(name)
+        }
+    }
+
+    fun deleteConversation(id: String) {
+        // Implementation
+    }
 }
+
+data class DrawerUiState(
+    val spaces: List<SpaceEntity> = emptyList(),
+    val currentSpaceId: String? = null,
+    val conversations: List<ConversationEntity> = emptyList(),
+)

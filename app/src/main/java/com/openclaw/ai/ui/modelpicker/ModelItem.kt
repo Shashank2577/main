@@ -1,14 +1,12 @@
 package com.openclaw.ai.ui.modelpicker
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,117 +28,70 @@ fun ModelItem(
     downloadStatus: ModelDownloadStatus,
     downloadProgress: Float,
     onSelect: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
-    val isDownloaded = model.url.isEmpty() || downloadStatus.status == SUCCEEDED
-    val isDownloading = downloadStatus.status == IN_PROGRESS || downloadStatus.status == UNZIPPING
-
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (isActive) {
-                    Modifier.border(
-                        width = 2.dp,
-                        color = AccentViolet.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(16.dp),
-                    )
-                } else {
-                    Modifier
-                }
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onSelect),
+        onClick = onSelect,
         shape = RoundedCornerShape(16.dp),
-        color = ForegroundInverse,
-        shadowElevation = 1.dp,
+        color = if (isActive) SurfacePressed else SurfaceCard,
+        shadowElevation = if (isActive) 0.dp else 1.dp,
+        modifier = modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = model.displayName,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                    color = ForegroundPrimary,
-                )
-                
-                val sizeLabel = if (model.sizeInBytes > 0) "%.1f GB".format(model.sizeInBytes / 1_000_000_000.0) else ""
-                if (sizeLabel.isNotEmpty()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    // Status dot
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when (downloadStatus.status) {
+                                    SUCCEEDED -> AccentGreen
+                                    IN_PROGRESS, UNZIPPING -> AccentViolet
+                                    FAILED -> AccentRed
+                                    else -> ForegroundMuted.copy(alpha = 0.3f)
+                                }
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = sizeLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = ForegroundMuted,
+                        text = model.displayName,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = ForegroundPrimary
                     )
                 }
-
-                if (isDownloading) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        LinearProgressIndicator(
-                            progress = { downloadProgress },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(4.dp)
-                                .clip(CircleShape),
-                            color = AccentViolet,
-                            trackColor = SurfaceCard,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "${(downloadProgress * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = AccentViolet,
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ModelTypeBadge(isLocal = model.url.isNotEmpty())
-
-                Spacer(modifier = Modifier.width(8.dp))
-
+                
                 if (isActive) {
                     Icon(
                         imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = "Active",
                         tint = AccentViolet,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(20.dp)
                     )
-                } else if (!isDownloaded && !isDownloading) {
+                } else if (downloadStatus.status == NOT_DOWNLOADED) {
                     Icon(
                         imageVector = Icons.Rounded.CloudDownload,
-                        contentDescription = "Download",
+                        contentDescription = "Not Downloaded",
                         tint = ForegroundMuted,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
+            
+            if (downloadStatus.status == IN_PROGRESS || downloadStatus.status == UNZIPPING) {
+                Spacer(modifier = Modifier.height(12.dp))
+                LinearProgressIndicator(
+                    progress = { downloadProgress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+                    color = AccentViolet,
+                    trackColor = SurfaceCard
+                )
+            }
         }
-    }
-}
-
-@Composable
-private fun ModelTypeBadge(isLocal: Boolean) {
-    val label = if (isLocal) "Local" else "Cloud"
-    val badgeColor = if (isLocal) LocalBadgeGreen else CloudBadgeBlue
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(badgeColor)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }

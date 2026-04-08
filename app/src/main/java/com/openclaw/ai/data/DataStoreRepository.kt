@@ -112,7 +112,7 @@ interface DataStoreRepository {
 }
 
 /** Repository for managing data using Proto DataStore. */
-class DefaultDataStoreRepository @javax.inject.Inject constructor(
+class DefaultDataStoreRepository(
   private val dataStore: DataStore<Settings>,
   private val userDataDataStore: DataStore<UserData>,
   private val cutoutDataStore: DataStore<CutoutCollection>,

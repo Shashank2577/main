@@ -2,28 +2,39 @@ package com.openclaw.ai.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import com.openclaw.ai.data.db.dao.ConversationDao
-import com.openclaw.ai.data.db.dao.MessageDao
-import com.openclaw.ai.data.db.dao.PerChatSettingsDao
-import com.openclaw.ai.data.db.dao.SpaceDao
-import com.openclaw.ai.data.db.entity.ConversationEntity
-import com.openclaw.ai.data.db.entity.MessageEntity
-import com.openclaw.ai.data.db.entity.PerChatSettingsEntity
-import com.openclaw.ai.data.db.entity.SpaceEntity
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.openclaw.ai.data.db.dao.*
+import com.openclaw.ai.data.db.entity.*
 
 @Database(
     entities = [
+        SpaceEntity::class,
         ConversationEntity::class,
         MessageEntity::class,
-        SpaceEntity::class,
-        PerChatSettingsEntity::class,
+        PerChatSettingsEntity::class
     ],
-    version = 1,
-    exportSchema = true,
+    version = 5,
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun spaceDao(): SpaceDao
     abstract fun conversationDao(): ConversationDao
     abstract fun messageDao(): MessageDao
-    abstract fun spaceDao(): SpaceDao
     abstract fun perChatSettingsDao(): PerChatSettingsDao
+
+    companion object {
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN thought TEXT")
+            }
+        }
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE messages ADD COLUMN webviewUrl TEXT")
+                db.execSQL("ALTER TABLE messages ADD COLUMN isIframe INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE messages ADD COLUMN aspectRatio REAL NOT NULL DEFAULT 1.333")
+            }
+        }
+    }
 }

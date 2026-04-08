@@ -1,7 +1,24 @@
+/*
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.openclaw.ai.common
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.squareup.moshi.JsonClass
 import kotlinx.coroutines.CompletableDeferred
 
 interface LatencyProvider {
@@ -58,6 +75,7 @@ data class SkillInfo(
 
 data class SkillsIndex(val skills: List<SkillInfo>)
 
+@JsonClass(generateAdapter = true)
 data class CallJsSkillResult(
   val result: String?,
   val error: String?,
@@ -65,10 +83,15 @@ data class CallJsSkillResult(
   val webview: CallJsSkillResultWebview?,
 )
 
-data class CallJsSkillResultImage(val base64: String?)
+@JsonClass(generateAdapter = true) data class CallJsSkillResultImage(val base64: String?)
 
+@JsonClass(generateAdapter = true)
 data class CallJsSkillResultWebview(
   val url: String?,
   val iframe: Boolean?,
+  // width/height.
+  //
+  // In the app the webview always takes the full width of the screen. This value is used to
+  // calculate the height of the webview. Default is 4:3.
   val aspectRatio: Float?,
 )

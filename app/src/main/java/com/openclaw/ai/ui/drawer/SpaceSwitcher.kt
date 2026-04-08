@@ -1,165 +1,99 @@
 package com.openclaw.ai.ui.drawer
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.openclaw.ai.data.db.entity.SpaceEntity
-
-private val PurpleAccent = Color(0xFF7C3AED)
-private val SectionLabelGray = Color(0xFF9CA3AF)
+import com.openclaw.ai.ui.theme.*
 
 @Composable
 fun SpaceSwitcher(
     spaces: List<SpaceEntity>,
-    currentSpaceId: String,
-    onSpaceSelected: (String) -> Unit,
-    onCreateSpace: (name: String, emoji: String) -> Unit,
-    modifier: Modifier = Modifier,
+    selectedSpaceId: String?,
+    onSpaceSelect: (String) -> Unit,
+    onCreateSpace: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    var showCreateDialog by remember { mutableStateOf(false) }
-
-    Column(modifier = modifier) {
-        Text(
-            text = "SPACES",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 2.sp,
-            ),
-            color = SectionLabelGray,
-            modifier = Modifier.padding(start = 28.dp, top = 8.dp, bottom = 4.dp),
-        )
-
-        spaces.forEach { space ->
-            val isSelected = space.id == currentSpaceId
-            NavigationDrawerItem(
-                label = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = space.emoji,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = space.name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        )
-                    }
-                },
-                selected = isSelected,
-                onClick = { onSpaceSelected(space.id) },
-                colors = NavigationDrawerItemDefaults.colors(
-                    selectedContainerColor = Color(0xFFF3EEFF),
-                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                ),
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(72.dp)
+            .background(SurfaceCard)
+            .padding(vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(spaces, key = { it.id }) { space ->
+                SpaceCircle(
+                    name = space.name,
+                    isSelected = space.id == selectedSpaceId,
+                    onClick = { onSpaceSelect(space.id) }
+                )
+            }
         }
 
-        NavigationDrawerItem(
-            label = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        tint = PurpleAccent,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "+ Create Space",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PurpleAccent,
-                    )
-                }
-            },
-            selected = false,
-            onClick = { showCreateDialog = true },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-        )
-    }
-
-    if (showCreateDialog) {
-        CreateSpaceDialog(
-            onConfirm = { name, emoji ->
-                onCreateSpace(name, emoji)
-                showCreateDialog = false
-            },
-            onDismiss = { showCreateDialog = false },
-        )
+        IconButton(
+            onClick = onCreateSpace,
+            modifier = Modifier
+                .size(48.dp)
+                .background(BorderMuted.copy(alpha = 0.5f), CircleShape)
+        ) {
+            Icon(Icons.Rounded.Add, null, tint = ForegroundSecondary)
+        }
     }
 }
 
 @Composable
-private fun CreateSpaceDialog(
-    onConfirm: (name: String, emoji: String) -> Unit,
-    onDismiss: () -> Unit,
+private fun SpaceCircle(
+    name: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var emoji by remember { mutableStateOf("\uD83D\uDCC1") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Create Space") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = emoji,
-                    onValueChange = { emoji = it },
-                    label = { Text("Emoji") },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
+    Box(contentAlignment = Alignment.Center) {
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(AccentViolet.copy(alpha = 0.1f), CircleShape)
+                    .padding(2.dp)
+                    .background(Color.Transparent, CircleShape)
+            )
+        }
+        
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = if (isSelected) AccentViolet else SurfacePressed,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = name.take(1).uppercase(),
+                    color = if (isSelected) Color.White else ForegroundSecondary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
                 )
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (name.isNotBlank()) {
-                        onConfirm(name.trim(), emoji.trim().ifEmpty { "\uD83D\uDCC1" })
-                    }
-                },
-                enabled = name.isNotBlank(),
-            ) {
-                Text("Create")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-    )
+        }
+    }
 }

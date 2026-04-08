@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.openclaw.ai.ui.common.MarkdownText
 import com.openclaw.ai.ui.common.RotationalLoader
@@ -50,6 +51,8 @@ import com.openclaw.ai.ui.theme.customColors
 @Composable
 fun ThinkingIndicator(
     thinkingText: String = "",
+    size: Dp = 32.dp,
+    dotSize: Dp = 8.dp,
     modifier: Modifier = Modifier,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -73,8 +76,8 @@ fun ThinkingIndicator(
         ) {
             RotationalLoader(
                 text = "",
-                dotSize = 8.dp,
-                modifier = Modifier.size(32.dp),
+                dotSize = dotSize,
+                modifier = Modifier.size(size),
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -107,7 +110,7 @@ fun ThinkingIndicator(
             exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(tween(200)),
         ) {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.fillMaxWidth(),
             ) {

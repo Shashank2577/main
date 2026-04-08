@@ -18,41 +18,22 @@ class MainViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
-    // Tri-state: null = not yet checked, false = not complete, true = complete
-    private val _onboardingComplete = MutableStateFlow<Boolean?>(null)
-    val onboardingComplete: StateFlow<Boolean?> = _onboardingComplete.asStateFlow()
+    val isOnboardingComplete: StateFlow<Boolean> = settingsRepository.isOnboardingComplete()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val themeMode: StateFlow<ThemeMode> = settingsRepository.getThemeMode()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = ThemeMode.SYSTEM,
-        )
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
     private val _currentConversationId = MutableStateFlow<String?>(null)
     val currentConversationId: StateFlow<String?> = _currentConversationId.asStateFlow()
 
-    private val _currentSpaceId = MutableStateFlow<String?>(null)
-    val currentSpaceId: StateFlow<String?> = _currentSpaceId.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            _onboardingComplete.value = settingsRepository.isOnboardingComplete()
-        }
-    }
-
-    fun onOnboardingComplete() {
+    fun completeOnboarding() {
         viewModelScope.launch {
             settingsRepository.setOnboardingComplete(true)
-            _onboardingComplete.value = true
         }
     }
 
     fun setCurrentConversation(conversationId: String?) {
         _currentConversationId.value = conversationId
-    }
-
-    fun setCurrentSpace(spaceId: String?) {
-        _currentSpaceId.value = spaceId
     }
 }

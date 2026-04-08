@@ -93,7 +93,7 @@ fun SettingsScreen(
             items(localModels, key = { it.name }) { model ->
                 ModelManagementCard(
                     model = model,
-                    status = downloadStatuses[model.name] ?: ModelDownloadStatus(NOT_DOWNLOADED),
+                    status = downloadStatuses[model.name] ?: ModelDownloadStatus(status = NOT_DOWNLOADED),
                     progress = downloadProgress[model.name] ?: 0f,
                     isDefault = model.name == defaultModelId,
                     onDownload = { viewModel.downloadModel(model.name) },
@@ -112,7 +112,8 @@ fun SettingsScreen(
                         isKeyVisible = uiState.isApiKeyVisible,
                         onApiKeyChange = viewModel::onApiKeyChange,
                         onToggleVisibility = viewModel::toggleApiKeyVisibility,
-                        onSave = viewModel::saveApiKey,
+                        onTestConnection = { viewModel.testApiKey() },
+                        onSave = { viewModel.saveApiKey() },
                         isValid = uiState.isApiKeyValid,
                         isTesting = uiState.isTesting
                     )
@@ -310,7 +311,7 @@ private fun ThemeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
                 selected = selected == mode,
                 onClick = { onSelect(mode) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = ThemeMode.entries.size),
-                label = { Text(mode.name.lowercase().capitalize()) }
+                label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
             )
         }
     }

@@ -5,14 +5,18 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openclaw.ai.customtasks.agentchat.AgentTools
+import com.openclaw.ai.customtasks.agentchat.SkillManagerViewModel
+import com.openclaw.ai.data.DataStoreRepository
 import com.openclaw.ai.data.Model
 import com.openclaw.ai.data.db.entity.MessageEntity
 import com.openclaw.ai.data.model.ChatMessageData
 import com.openclaw.ai.data.model.MessageRole
 import com.openclaw.ai.data.repository.ConversationRepository
 import com.openclaw.ai.data.repository.ModelRepository
-import com.openclaw.ai.data.repository.SettingsRepository
 import com.openclaw.ai.runtime.LlmModelHelper
+import com.openclaw.ai.runtime.runInference
+import com.google.ai.edge.litertlm.tool
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -25,16 +29,11 @@ import javax.inject.Inject
 class ChatViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val conversationRepository: ConversationRepository,
-    private val settingsRepository: SettingsRepository,
     private val modelRepository: ModelRepository,
     private val llmModelHelper: LlmModelHelper,
+    val agentTools: AgentTools,
+    val skillManagerViewModel: SkillManagerViewModel,
 ) : ViewModel() {
-
-    private val _currentConversationId = MutableStateFlow<String?>(null)
-    val currentConversationId: StateFlow<String?> = _currentConversationId.asStateFlow()
-
-    private val _conversationTitle = MutableStateFlow("New Chat")
-    val conversationTitle: StateFlow<String> = _conversationTitle.asStateFlow()
 
     private val _messages = MutableStateFlow<List<ChatMessageData>>(emptyList())
     val messages: StateFlow<List<ChatMessageData>> = _messages.asStateFlow()
@@ -46,100 +45,205 @@ class ChatViewModel @Inject constructor(
 
     private var inferenceJob: Job? = null
 
+    private val _currentConversationId = MutableStateFlow<String?>(null)
+
+    private var _modelInitialized = false
+    private var _initializedModelId: String? = null
+
     init {
+        agentTools.context = context
+        agentTools.skillManagerViewModel = skillManagerViewModel
+
         viewModelScope.launch {
-            modelRepository.activeModel.collectLatest { model ->
-                if (model != null && model.url.isNotEmpty()) {
-                    if (modelRepository.isModelDownloaded(model.name)) {
-                        llmModelHelper.initialize(
-                            context = context,
-                            model = model,
-                            supportImage = model.llmSupportImage,
-                            supportAudio = model.llmSupportAudio,
-                            onDone = { Log.d("ChatViewModel", "Model initialized: $it") },
-                            coroutineScope = viewModelScope
-                        )
-                    }
-                }
-            }
+            skillManagerViewModel.loadSkills {}
         }
     }
 
-    fun loadConversation(conversationId: String) {
-        viewModelScope.launch {
-            val conversation = conversationRepository.getConversation(conversationId) ?: return@launch
-            _currentConversationId.value = conversationId
-            _conversationTitle.value = conversation.title
-
-            conversationRepository.getMessages(conversationId).collect { entities ->
-                _messages.value = entities.map { it.toChatMessageData() }
-            }
-        }
+    private suspend fun startNewConversation() {
+        val id = conversationRepository.createConversation("default", "New Chat")
+        _currentConversationId.value = id
     }
 
-    fun sendMessage(text: String, images: List<Bitmap> = emptyList()) {
-        val conversationId = _currentConversationId.value ?: return
-        val model = modelRepository.activeModel.value ?: return
+    fun sendMessage(text: String) {
+        val model = currentModel.value ?: return
         if (text.isBlank()) return
 
         inferenceJob = viewModelScope.launch {
+            if (_currentConversationId.value == null) {
+                startNewConversation()
+            }
+            val conversationId = _currentConversationId.value ?: "default"
+
             val userId = UUID.randomUUID().toString()
-            conversationRepository.addMessage(MessageEntity(
+            val userTimestamp = System.currentTimeMillis()
+            val userMsg = ChatMessageData(
                 id = userId,
                 conversationId = conversationId,
-                role = MessageRole.USER.value,
+                role = MessageRole.USER,
                 content = text,
-                timestamp = System.currentTimeMillis()
-            ))
+                timestamp = userTimestamp
+            )
+            _messages.update { it + userMsg }
+            conversationRepository.addMessage(
+                MessageEntity(
+                    id = userId,
+                    conversationId = conversationId,
+                    role = MessageRole.USER.value,
+                    content = text,
+                    timestamp = userTimestamp
+                )
+            )
 
             val assistantId = UUID.randomUUID().toString()
+            val assistantTimestamp = System.currentTimeMillis()
             val placeholder = ChatMessageData(
                 id = assistantId,
                 conversationId = conversationId,
                 role = MessageRole.ASSISTANT,
                 content = "",
-                timestamp = System.currentTimeMillis(),
+                timestamp = assistantTimestamp,
                 isStreaming = true
             )
             _messages.update { it + placeholder }
             _isStreaming.value = true
 
             var fullResponse = ""
-            
-            if (model.url.isEmpty()) {
-                // Cloud logic placeholder
-                _isStreaming.value = false
-                _messages.update { list ->
-                    list.map { if (it.id == assistantId) it.copy(content = "Cloud support pending", isStreaming = false) else it }
-                }
+            var fullThought = ""
+
+            val selectedSkills = skillManagerViewModel.getSelectedSkills()
+
+            val needsInit = !_modelInitialized || _initializedModelId != model.name
+            if (needsInit) {
+                llmModelHelper.initialize(
+                    context = context,
+                    model = model,
+                    supportImage = model.llmSupportImage,
+                    supportAudio = model.llmSupportAudio,
+                    onDone = { error ->
+                        if (error.isNotEmpty()) {
+                            Log.e("ChatViewModel", "Init error: $error")
+                            return@initialize
+                        }
+                        _modelInitialized = true
+                        _initializedModelId = model.name
+
+                        llmModelHelper.runInference(
+                            model = model,
+                            input = text,
+                            resultListener = { partial, done, thought ->
+                                fullResponse += partial
+                                if (thought != null) fullThought += thought
+
+                                if (done) {
+                                    _isStreaming.value = false
+                                    val webview = agentTools.resultWebviewToShow
+                                    agentTools.resultWebviewToShow = null
+
+                                    val finalMessage = placeholder.copy(
+                                        content = fullResponse,
+                                        thought = fullThought.ifEmpty { null },
+                                        webviewUrl = webview?.url,
+                                        isIframe = webview?.iframe == true,
+                                        aspectRatio = webview?.aspectRatio ?: 1.333f,
+                                        isStreaming = false
+                                    )
+                                    _messages.update { list ->
+                                        list.map { if (it.id == assistantId) finalMessage else it }
+                                    }
+                                    viewModelScope.launch {
+                                        conversationRepository.addMessage(
+                                            MessageEntity(
+                                                id = assistantId,
+                                                conversationId = conversationId,
+                                                role = MessageRole.ASSISTANT.value,
+                                                content = fullResponse,
+                                                thought = fullThought.ifEmpty { null },
+                                                webviewUrl = finalMessage.webviewUrl,
+                                                isIframe = finalMessage.isIframe,
+                                                aspectRatio = finalMessage.aspectRatio,
+                                                timestamp = assistantTimestamp
+                                            )
+                                        )
+                                    }
+                                } else {
+                                    _messages.update { list ->
+                                        list.map {
+                                            if (it.id == assistantId) {
+                                                it.copy(content = fullResponse, thought = fullThought.ifEmpty { null })
+                                            } else it
+                                        }
+                                    }
+                                }
+                            },
+                            cleanUpListener = {},
+                            onError = { err ->
+                                _isStreaming.value = false
+                                _messages.update { list ->
+                                    list.map { if (it.id == assistantId) it.copy(content = "Error: $err", isStreaming = false) else it }
+                                }
+                            },
+                            coroutineScope = viewModelScope
+                        )
+                    },
+                    systemInstruction = if (selectedSkills.isEmpty()) null else skillManagerViewModel.getSystemPrompt("You are a helpful AI assistant with access to tools."),
+                    tools = listOf(tool(agentTools)),
+                    enableConversationConstrainedDecoding = true,
+                    coroutineScope = viewModelScope
+                )
             } else {
                 llmModelHelper.runInference(
                     model = model,
                     input = text,
-                    images = images,
-                    resultListener = { partial, done, _ ->
+                    resultListener = { partial, done, thought ->
                         fullResponse += partial
-                        _messages.update { list ->
-                            list.map { if (it.id == assistantId) it.copy(content = fullResponse, isStreaming = !done) else it }
-                        }
+                        if (thought != null) fullThought += thought
+
                         if (done) {
                             _isStreaming.value = false
+                            val webview = agentTools.resultWebviewToShow
+                            agentTools.resultWebviewToShow = null
+
+                            val finalMessage = placeholder.copy(
+                                content = fullResponse,
+                                thought = fullThought.ifEmpty { null },
+                                webviewUrl = webview?.url,
+                                isIframe = webview?.iframe == true,
+                                aspectRatio = webview?.aspectRatio ?: 1.333f,
+                                isStreaming = false
+                            )
+                            _messages.update { list ->
+                                list.map { if (it.id == assistantId) finalMessage else it }
+                            }
                             viewModelScope.launch {
-                                conversationRepository.addMessage(MessageEntity(
-                                    id = assistantId,
-                                    conversationId = conversationId,
-                                    role = MessageRole.ASSISTANT.value,
-                                    content = fullResponse,
-                                    timestamp = System.currentTimeMillis()
-                                ))
+                                conversationRepository.addMessage(
+                                    MessageEntity(
+                                        id = assistantId,
+                                        conversationId = conversationId,
+                                        role = MessageRole.ASSISTANT.value,
+                                        content = fullResponse,
+                                        thought = fullThought.ifEmpty { null },
+                                        webviewUrl = finalMessage.webviewUrl,
+                                        isIframe = finalMessage.isIframe,
+                                        aspectRatio = finalMessage.aspectRatio,
+                                        timestamp = assistantTimestamp
+                                    )
+                                )
+                            }
+                        } else {
+                            _messages.update { list ->
+                                list.map {
+                                    if (it.id == assistantId) {
+                                        it.copy(content = fullResponse, thought = fullThought.ifEmpty { null })
+                                    } else it
+                                }
                             }
                         }
                     },
                     cleanUpListener = {},
-                    onError = { error ->
+                    onError = { err ->
                         _isStreaming.value = false
                         _messages.update { list ->
-                            list.map { if (it.id == assistantId) it.copy(content = "Error: $error", isStreaming = false) else it }
+                            list.map { if (it.id == assistantId) it.copy(content = "Error: $err", isStreaming = false) else it }
                         }
                     },
                     coroutineScope = viewModelScope
@@ -149,23 +253,8 @@ class ChatViewModel @Inject constructor(
     }
 
     fun stopGeneration() {
-        val model = modelRepository.activeModel.value ?: return
-        llmModelHelper.stopResponse(model)
+        currentModel.value?.let { llmModelHelper.stopResponse(it) }
         inferenceJob?.cancel()
         _isStreaming.value = false
     }
-
-    override fun onCleared() {
-        super.onCleared()
-        modelRepository.activeModel.value?.let { llmModelHelper.cleanUp(it) {} }
-    }
 }
-
-private fun MessageEntity.toChatMessageData(): ChatMessageData = ChatMessageData(
-    id = id,
-    conversationId = conversationId,
-    role = MessageRole.fromValue(role),
-    content = content,
-    mediaUri = mediaUri,
-    timestamp = timestamp
-)

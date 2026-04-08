@@ -18,7 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class ModelRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val downloadRepository: DownloadRepository,
+    private val downloadRepository: com.openclaw.ai.data.DownloadRepository,
     private val dataStoreRepository: DataStoreRepository,
 ) : ModelRepository {
 
@@ -50,11 +50,12 @@ class ModelRepositoryImpl @Inject constructor(
                 val allowlist = gson.fromJson(jsonString, ModelAllowlist::class.java)
                 val models = allowlist.models.filter { it.disabled != true }.map { it.toModel() }
                 
-                // Add cloud models bridged for my UI
+                // Add cloud models
                 val cloudModels = listOf(
                     Model(
                         name = "gemini-2.0-flash",
                         version = "1.0",
+                        displayName = "Gemini 2.0 Flash",
                         info = "Fast cloud model.",
                         url = "",
                         isLlm = true
@@ -62,6 +63,7 @@ class ModelRepositoryImpl @Inject constructor(
                     Model(
                         name = "gemini-2.0-pro",
                         version = "1.0",
+                        displayName = "Gemini 2.0 Pro",
                         info = "Capable cloud model.",
                         url = "",
                         isLlm = true
@@ -71,7 +73,11 @@ class ModelRepositoryImpl @Inject constructor(
                 val allModels = models + cloudModels
                 _availableModels.value = allModels
                 
-                // Initial status sync
+                // Set initial active model from DataStore faithfully
+                val settings = dataStoreRepository.readSettings()
+                val initialModel = allModels.find { it.name == settings.defaultModelName } ?: allModels.firstOrNull()
+                _activeModel.value = initialModel
+                
                 refreshStatuses()
             } catch (e: Exception) {
                 Log.e("ModelRepository", "Failed to load models", e)
@@ -102,7 +108,9 @@ class ModelRepositoryImpl @Inject constructor(
         _availableModels.value.filter { isModelDownloadedSync(it.name) }
 
     override suspend fun setActiveModel(modelName: String) {
-        _activeModel.value = getModel(modelName)
+        val model = getModel(modelName)
+        _activeModel.value = model
+        model?.let { dataStoreRepository.saveDefaultModelName(it.name) }
     }
 
     override suspend fun downloadModel(
@@ -112,7 +120,7 @@ class ModelRepositoryImpl @Inject constructor(
         onError: (String) -> Unit,
     ) {
         downloadRepository.downloadModel(
-            task = Task(id = "chat", label = "Chat", models = mutableListOf(model), category = Category.LLM),
+            task = Task(id = "chat", label = "Chat", description = "LLM Chat", models = mutableListOf(model), category = Category.LLM),
             model = model,
             onStatusUpdated = { status ->
                 _downloadStatuses.update { it + (model.name to status) }

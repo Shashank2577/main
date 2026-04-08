@@ -5,6 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStoreFile
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.openclaw.ai.*
 import com.openclaw.ai.data.db.AppDatabase
@@ -28,7 +31,10 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "openclaw.db"
-        ).build()
+        )
+        .addMigrations(AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5)
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
@@ -43,6 +49,16 @@ object DatabaseModule {
     @Provides
     fun providePerChatSettingsDao(db: AppDatabase): PerChatSettingsDao = db.perChatSettingsDao()
 
+    // Preferences DataStore
+    @Provides
+    @Singleton
+    fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
+        return PreferenceDataStoreFactory.create(
+            produceFile = { context.preferencesDataStoreFile("settings_prefs") }
+        )
+    }
+
+    // Proto Serializers
     @Provides
     @Singleton
     fun provideSettingsSerializer(): Serializer<Settings> = SettingsSerializer
@@ -63,6 +79,7 @@ object DatabaseModule {
     @Singleton
     fun provideSkillsSerializer(): Serializer<Skills> = SkillsSerializer
 
+    // Proto DataStores
     @Provides
     @Singleton
     fun provideSettingsDataStore(

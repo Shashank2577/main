@@ -111,6 +111,7 @@ dependencies {
 
     // DataStore & Protobuf
     implementation(libs.androidx.datastore)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.protobuf.javalite)
 
     // Hilt DI

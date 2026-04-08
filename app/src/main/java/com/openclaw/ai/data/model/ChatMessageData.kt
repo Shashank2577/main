@@ -17,12 +17,12 @@ data class ChatMessageData(
     val conversationId: String,
     val role: MessageRole,
     val content: String,
+    val thought: String? = null,
     val mediaUri: String? = null,
-    val toolName: String? = null,
-    val toolParams: String? = null,
-    val toolResult: String? = null,
+    val webviewUrl: String? = null,
+    val isIframe: Boolean = false,
+    val aspectRatio: Float = 1.333f,
     val timestamp: Long,
-    val tokens: Int? = null,
     val isStreaming: Boolean = false,
 )
 

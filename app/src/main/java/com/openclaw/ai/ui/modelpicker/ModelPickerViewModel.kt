@@ -18,31 +18,23 @@ class ModelPickerViewModel @Inject constructor(
 ) : ViewModel() {
 
     val localModels: StateFlow<List<Model>> = modelRepository.availableModels
-        .map { list -> list.filter { it.url.isNotEmpty() } }
+        .map { models -> models.filter { it.url.isNotEmpty() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val cloudModels: StateFlow<List<Model>> = modelRepository.availableModels
-        .map { list -> list.filter { it.url.isEmpty() } }
+        .map { models -> models.filter { it.url.isEmpty() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val activeModelId: StateFlow<String> = settingsRepository.getDefaultModelId()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val activeModelId: StateFlow<String?> = modelRepository.activeModel
+        .map { it?.name }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val downloadStatuses: StateFlow<Map<String, ModelDownloadStatus>> = modelRepository.downloadStatuses
     val downloadProgress: StateFlow<Map<String, Float>> = modelRepository.downloadProgress
 
     fun selectModel(modelName: String) {
         viewModelScope.launch {
-            val model = modelRepository.getModel(modelName) ?: return@launch
-            if (model.url.isNotEmpty()) {
-                if (modelRepository.isModelDownloaded(modelName)) {
-                    settingsRepository.setDefaultModelId(modelName)
-                } else {
-                    modelRepository.downloadModel(model)
-                }
-            } else {
-                settingsRepository.setDefaultModelId(modelName)
-            }
+            modelRepository.setActiveModel(modelName)
         }
     }
 }

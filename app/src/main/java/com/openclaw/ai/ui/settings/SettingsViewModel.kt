@@ -94,7 +94,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun testApiKey() {
-        // ...
+        // Implementation
     }
 
     fun clearAllConversations() {
