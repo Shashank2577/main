@@ -16,7 +16,7 @@ import com.openclaw.ai.common.getJsonResponse
 import com.openclaw.ai.data.DataStoreRepository
 import com.openclaw.ai.proto.Skill
 import com.google.ai.edge.litertlm.Contents
-import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.InputStreamReader
@@ -60,7 +60,7 @@ data class SkillManagerUiState(
   val validationError: String? = null,
 )
 
-@HiltViewModel
+@Singleton
 class SkillManagerViewModel
 @Inject
 constructor(
