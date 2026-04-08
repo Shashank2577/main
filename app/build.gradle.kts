@@ -71,6 +71,14 @@ android {
         buildConfig = true
     }
 
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "OpenClaw-AI-v${variant.versionName}-${variant.buildType.name}.apk"
+        }
+    }
+
     sourceSets {
         getByName("main") {
             java.srcDirs("build/generated/sources/proto/debug/java")
