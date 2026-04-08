@@ -59,10 +59,10 @@ fun AppNavigationDrawer(
     onNavigateToFiles: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val conversations by viewModel.conversations.collectAsState()
-    val spaces by viewModel.spaces.collectAsState()
-    val currentSpaceId by viewModel.currentSpaceId.collectAsState()
-    val currentConversationId by viewModel.currentConversationId.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val conversations = uiState.conversations
+    val spaces = uiState.spaces
+    val currentSpaceId = uiState.currentSpaceId
     val scope = rememberCoroutineScope()
 
     val currentSpace = spaces.firstOrNull { it.id == currentSpaceId }
@@ -81,7 +81,7 @@ fun AppNavigationDrawer(
                 ) {
                     // Header
                     DrawerHeader(
-                        spaceEmoji = currentSpace?.emoji ?: "\uD83D\uDCC1",
+                        spaceEmoji = currentSpace?.icon ?: "\uD83D\uDCC1",
                         spaceName = currentSpace?.name ?: "Personal",
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
                     )
@@ -89,11 +89,9 @@ fun AppNavigationDrawer(
                     // New Chat button
                     Surface(
                         onClick = {
-                            scope.launch {
-                                val conversation = viewModel.createNewChat()
-                                drawerState.close()
-                                onNewChat(conversation.id)
-                            }
+                            viewModel.createNewChat()
+                            scope.launch { drawerState.close() }
+                            onNewChat("")
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -137,9 +135,8 @@ fun AppNavigationDrawer(
                     // Conversations list (not lazy — inside scroll column)
                     ConversationList(
                         conversations = conversations,
-                        currentConversationId = currentConversationId,
+                        currentConversationId = null,
                         onSelect = { id ->
-                            viewModel.setCurrentConversation(id)
                             scope.launch { drawerState.close() }
                             onConversationSelected(id)
                         },
@@ -153,13 +150,13 @@ fun AppNavigationDrawer(
                     // Spaces switcher
                     SpaceSwitcher(
                         spaces = spaces,
-                        currentSpaceId = currentSpaceId,
-                        onSpaceSelected = { id ->
+                        selectedSpaceId = currentSpaceId,
+                        onSpaceSelect = { id ->
                             viewModel.switchSpace(id)
                             scope.launch { drawerState.close() }
                         },
-                        onCreateSpace = { name, emoji ->
-                            viewModel.createSpace(name = name, emoji = emoji)
+                        onCreateSpace = {
+                            viewModel.createSpace(name = "New Space")
                         },
                     )
 

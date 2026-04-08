@@ -17,7 +17,6 @@
 package com.openclaw.ai.data
 
 import android.os.Build
-import com.openclaw.ai.proto.Config
 import com.google.gson.annotations.SerializedName
 
 /** Stub for hardware check. */
@@ -59,7 +58,6 @@ data class ModelAllowlistEntry(
       llmSupportImage = llmSupportImage,
       llmSupportAudio = llmSupportAudio,
       isLlm = isLlm,
-      isExperimental = isExperimental,
       accelerators =
         accelerators.map {
           when (it.uppercase()) {

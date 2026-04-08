@@ -37,6 +37,7 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.WorkRequest
 import com.openclaw.ai.AppLifecycleProvider
 import com.openclaw.ai.MainActivity
 import com.openclaw.ai.R
@@ -84,9 +85,9 @@ class DefaultDownloadRepository(
 
     val inputData =
       Data.Builder()
-        .putString(DownloadWorker.KEY_MODEL_NAME, model.name)
-        .putString(DownloadWorker.KEY_DOWNLOAD_URL, model.url)
-        .putLong(DownloadWorker.KEY_TOTAL_BYTES, model.sizeInBytes)
+        .putString(KEY_MODEL_NAME, model.name)
+        .putString(KEY_MODEL_URL, model.url)
+        .putLong(KEY_MODEL_TOTAL_BYTES, model.sizeInBytes)
         .build()
 
     val downloadWorkRequest: OneTimeWorkRequest =
@@ -95,7 +96,7 @@ class DefaultDownloadRepository(
         .setInputData(inputData)
         .setBackoffCriteria(
           BackoffPolicy.LINEAR,
-          OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+          WorkRequest.MIN_BACKOFF_MILLIS,
           TimeUnit.MILLISECONDS,
         )
         .addTag(model.name)
@@ -121,7 +122,7 @@ class DefaultDownloadRepository(
                 WorkInfo.State.FAILED -> ModelDownloadStatusType.FAILED
                 WorkInfo.State.CANCELLED -> ModelDownloadStatusType.NOT_DOWNLOADED
                 WorkInfo.State.RUNNING -> {
-                  if (progress.getBoolean(DownloadWorker.KEY_IS_UNZIPPING, false)) {
+                  if (progress.getBoolean(KEY_MODEL_START_UNZIPPING, false)) {
                     ModelDownloadStatusType.UNZIPPING
                   } else {
                     ModelDownloadStatusType.IN_PROGRESS
@@ -131,10 +132,10 @@ class DefaultDownloadRepository(
               }
             ModelDownloadStatus(
               status = status,
-              receivedBytes = progress.getLong(DownloadWorker.KEY_RECEIVED_BYTES, 0L),
-              totalBytes = progress.getLong(DownloadWorker.KEY_TOTAL_BYTES, model.sizeInBytes),
-              errorMessage = progress.getString(DownloadWorker.KEY_ERROR_MESSAGE) ?: "",
-              bytesPerSecond = progress.getLong(DownloadWorker.KEY_BYTES_PER_SECOND, 0L),
+              receivedBytes = progress.getLong(KEY_MODEL_DOWNLOAD_RECEIVED_BYTES, 0L),
+              totalBytes = progress.getLong(KEY_MODEL_TOTAL_BYTES, model.sizeInBytes),
+              errorMessage = progress.getString(KEY_MODEL_DOWNLOAD_ERROR_MESSAGE) ?: "",
+              bytesPerSecond = progress.getLong(KEY_MODEL_DOWNLOAD_RATE, 0L),
             )
           }
         }

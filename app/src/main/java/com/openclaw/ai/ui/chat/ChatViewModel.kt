@@ -43,9 +43,13 @@ class ChatViewModel @Inject constructor(
 
     val currentModel: StateFlow<Model?> = modelRepository.activeModel
 
-    private var inferenceJob: Job? = null
-
     private val _currentConversationId = MutableStateFlow<String?>(null)
+
+    val conversationTitle: StateFlow<String> = _currentConversationId
+        .map { "Chat" }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Chat")
+
+    private var inferenceJob: Job? = null
 
     private var _modelInitialized = false
     private var _initializedModelId: String? = null

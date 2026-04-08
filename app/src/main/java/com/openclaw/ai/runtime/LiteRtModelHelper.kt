@@ -69,7 +69,7 @@ class LiteRtModelHelper @Inject constructor() : LlmModelHelper {
                         temperature = DEFAULT_TEMPERATURE.toDouble(),
                     ),
                     systemInstruction = systemInstruction,
-                    toolProviders = tools,
+                    tools = tools,
                 )
             )
 
@@ -105,7 +105,7 @@ class LiteRtModelHelper @Inject constructor() : LlmModelHelper {
                         temperature = DEFAULT_TEMPERATURE.toDouble(),
                     ),
                     systemInstruction = systemInstruction,
-                    toolProviders = tools,
+                    tools = tools,
                 )
             )
             instance.conversation = newConversation

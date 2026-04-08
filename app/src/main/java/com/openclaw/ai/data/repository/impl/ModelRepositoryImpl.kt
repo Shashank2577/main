@@ -73,10 +73,8 @@ class ModelRepositoryImpl @Inject constructor(
                 val allModels = models + cloudModels
                 _availableModels.value = allModels
                 
-                // Set initial active model from DataStore faithfully
-                val settings = dataStoreRepository.readSettings()
-                val initialModel = allModels.find { it.name == settings.defaultModelName } ?: allModels.firstOrNull()
-                _activeModel.value = initialModel
+                // Set initial active model to first available model
+                _activeModel.value = allModels.firstOrNull()
                 
                 refreshStatuses()
             } catch (e: Exception) {
@@ -110,7 +108,6 @@ class ModelRepositoryImpl @Inject constructor(
     override suspend fun setActiveModel(modelName: String) {
         val model = getModel(modelName)
         _activeModel.value = model
-        model?.let { dataStoreRepository.saveDefaultModelName(it.name) }
     }
 
     override suspend fun downloadModel(

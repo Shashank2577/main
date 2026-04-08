@@ -50,7 +50,7 @@ fun getOrientation(inputStream: InputStream): Int {
 fun decodeBitmap(context: Context, uri: Uri, maxWidth: Int, maxHeight: Int): Bitmap? {
   var inputStream = context.contentResolver.openInputStream(uri) ?: return null
   val options = BitmapFactory.Options()
-  options.inJustDecodeSize = true
+  options.inJustDecodeBounds = true
   BitmapFactory.decodeStream(inputStream, null, options)
   inputStream.close()
 
