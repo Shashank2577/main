@@ -16,11 +16,13 @@
 
 package com.openclaw.ai
 
+import javax.inject.Inject
+
 interface AppLifecycleProvider {
   var isAppInForeground: Boolean
 }
 
-class OpenClawLifecycleProvider : AppLifecycleProvider {
+class OpenClawLifecycleProvider @Inject constructor() : AppLifecycleProvider {
   private var _isAppInForeground = false
 
   override var isAppInForeground: Boolean
