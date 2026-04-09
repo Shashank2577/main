@@ -45,7 +45,7 @@ fun SettingsScreen(
     var showClearDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = CanvasBg,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { 
@@ -62,7 +62,7 @@ fun SettingsScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = CanvasBg)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { innerPadding ->
@@ -154,13 +154,17 @@ fun SettingsScreen(
                         viewModel.clearAllConversations()
                         showClearDialog = false
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = AccentRed)
+                    colors = ButtonDefaults.textButtonColors(contentColor = AccentRed),
+                    shape = RoundedCornerShape(20.dp)
                 ) {
                     Text("Clear Everything")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
+                TextButton(
+                    onClick = { showClearDialog = false },
+                    shape = RoundedCornerShape(20.dp)
+                ) {
                     Text("Cancel")
                 }
             }
@@ -175,7 +179,7 @@ private fun SectionHeader(text: String) {
         modifier = Modifier.padding(bottom = 8.dp, start = 4.dp),
         style = MaterialTheme.typography.labelSmall.copy(
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.2.sp
+            letterSpacing = 0.5.sp
         ),
         color = ForegroundMuted
     )
@@ -185,9 +189,9 @@ private fun SectionHeader(text: String) {
 private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = ForegroundInverse,
-        shadowElevation = 2.dp
+        shape = RoundedCornerShape(24.dp),
+        color = Color.White.copy(alpha = 0.8f),
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -238,7 +242,7 @@ private fun ModelManagementCard(
             when (status.status) {
                 NOT_DOWNLOADED, FAILED -> {
                     IconButton(onClick = onDownload) {
-                        Icon(Icons.Rounded.CloudDownload, null, tint = AccentViolet)
+                        Icon(Icons.Rounded.CloudDownload, null, tint = Color(0xFF7C3AED))
                     }
                 }
                 IN_PROGRESS, PARTIALLY_DOWNLOADED, UNZIPPING -> {
@@ -266,7 +270,7 @@ private fun ModelManagementCard(
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                    color = AccentViolet,
+                    color = Color(0xFF7C3AED),
                     trackColor = SurfaceCard
                 )
                 if (status.bytesPerSecond > 0) {
@@ -311,7 +315,11 @@ private fun ThemeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
                 selected = selected == mode,
                 onClick = { onSelect(mode) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = ThemeMode.entries.size),
-                label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                colors = SegmentedButtonDefaults.segmentedButtonColors(
+                    activeContainerColor = Color(0xFF7C3AED),
+                    activeContentColor = Color.White
+                )
             )
         }
     }

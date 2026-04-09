@@ -53,14 +53,14 @@ fun AppNavigationDrawer(
             modifier = Modifier
                 .fillMaxHeight()
                 .weight(1f)
-                .background(CanvasBg)
+                .background(Color(0xFFF4F1FA))
                 .padding(bottom = 20.dp)
         ) {
             // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 56.dp, start = 24.dp, end = 24.dp, bottom = 20.dp),
+                    .padding(top = 56.dp, start = 24.dp, end = 24.dp, bottom = 24.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -83,7 +83,7 @@ fun AppNavigationDrawer(
                 Text(
                     text = "PocketAI",
                     style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         fontFamily = NunitoFontFamily,
                         fontSize = 22.sp
                     ),
@@ -151,7 +151,7 @@ fun AppNavigationDrawer(
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp, horizontal = 24.dp), color = BorderMuted)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp, horizontal = 24.dp), color = Color(0x10000000))
 
             // Footer Links
             Row(
@@ -173,9 +173,9 @@ private fun DrawerChatItem(title: String, isSelected: Boolean, onClick: () -> Un
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) SurfacePressed else SurfaceCard,
-        shadowElevation = if (isSelected) 0.dp else 1.dp
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) Color(0xFF7C3AED).copy(alpha = 0.1f) else Color.Transparent,
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
