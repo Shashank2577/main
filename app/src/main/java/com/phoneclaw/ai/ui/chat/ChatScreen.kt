@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,9 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -149,7 +151,7 @@ fun ChatScreen(
             }
         },
         bottomBar = {
-            InputBar(
+            ClaymorphicInputBar(
                 text = inputText,
                 onTextChange = { inputText = it },
                 onSend = { text ->
@@ -164,44 +166,49 @@ fun ChatScreen(
             )
         }
     ) { innerPadding ->
-        Box(
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .imePadding()
+                .imePadding(),
+            color = MaterialTheme.colorScheme.surface
         ) {
-            if (messages.isEmpty() && !isStreaming) {
-                EmptyState(
-                    icon = Icons.Outlined.ChatBubbleOutline,
-                    title = "How can I help you today?",
-                    subtitle = "PocketAI is ready to assist with any task.",
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(messages, key = { it.id }) { message ->
-                        MessageBubble(
-                            message = message,
-                            isStreaming = isStreaming && message.isStreaming
-                        )
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (messages.isEmpty() && !isStreaming) {
+                    EmptyState(
+                        icon = Icons.Outlined.ChatBubbleOutline,
+                        title = "How can I help you today?",
+                        subtitle = "PocketAI is ready to assist with any task.",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(messages, key = { it.id }) { message ->
+                            MessageBubble(
+                                message = message,
+                                isStreaming = isStreaming && message.isStreaming
+                            )
+                        }
                     }
                 }
-            }
 
-            // Hidden WebView for JS skills
-            Box(modifier = Modifier.size(1.dp).clip(CircleShape)) {
-                OpenClawWebView(
-                    onWebViewCreated = { webView ->
-                        webViewRef = webView
-                        webView.addJavascriptInterface(chatViewJavascriptInterface, "OpenClawBridge")
-                    },
-                    customWebViewClient = chatWebViewClient
-                )
+                // Hidden WebView for JS skills
+                Box(modifier = Modifier.size(1.dp).clip(CircleShape)) {
+                    OpenClawWebView(
+                        onWebViewCreated = { webView ->
+                            webViewRef = webView
+                            webView.addJavascriptInterface(chatViewJavascriptInterface, "OpenClawBridge")
+                        },
+                        customWebViewClient = chatWebViewClient
+                    )
+                }
             }
         }
     }
@@ -226,6 +233,134 @@ fun ChatScreen(
         )
     }
 }
+
+@Composable
+private fun ClaymorphicInputBar(
+    text: String,
+    onTextChange: (String) -> Unit,
+    onSend: (String) -> Unit,
+    onAttach: () -> Unit,
+    onVoiceToggle: () -> Unit,
+    onStop: () -> Unit,
+    isStreaming: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .imePadding(),
+        color = Color.Transparent,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            // Attachment button
+            IconButton(
+                onClick = onAttach,
+                modifier = Modifier
+                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                    .align(Alignment.Bottom),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AttachFile,
+                    contentDescription = "Attach file",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            // Text field — Claymorphic recessed look
+            OutlinedTextField(
+                value = text,
+                onValueChange = onTextChange,
+                modifier = Modifier.weight(1f),
+                placeholder = {
+                    Text(
+                        text = "Ask me anything...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    )
+                },
+                textStyle = MaterialTheme.typography.bodyLarge,
+                maxLines = 4,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
+                shape = RoundedCornerShape(20.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedContainerColor = Color(0xFFEFEBF5),
+                    unfocusedContainerColor = Color(0xFFEFEBF5),
+                ),
+            )
+
+            // Trailing action button: Stop / Send / Mic
+            AnimatedContent(
+                targetState = when {
+                    isStreaming -> TrailingAction.STOP
+                    text.isNotBlank() -> TrailingAction.SEND
+                    else -> TrailingAction.MIC
+                },
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "trailing_action",
+                modifier = Modifier.align(Alignment.Bottom),
+            ) { action ->
+                when (action) {
+                    TrailingAction.STOP -> FilledIconButton(
+                        onClick = onStop,
+                        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.StopCircle,
+                            contentDescription = "Stop generation",
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+
+                    // Send Button with gradient
+                    TrailingAction.SEND -> Box(
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Brush.linearGradient(listOf(Color(0xFFA78BFA), Color(0xFF7C3AED))))
+                            .clickable { if (text.isNotBlank()) onSend(text) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Send,
+                            contentDescription = "Send message",
+                            modifier = Modifier.size(22.dp),
+                            tint = Color.White
+                        )
+                    }
+
+                    // Mic
+                    TrailingAction.MIC -> IconButton(
+                        onClick = onVoiceToggle,
+                        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Mic,
+                            contentDescription = "Voice input",
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private enum class TrailingAction { STOP, SEND, MIC }
 
 @Composable
 private fun ChatTopBar(

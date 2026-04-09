@@ -1,6 +1,7 @@
 package com.phoneclaw.ai.ui.onboarding
 
 import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -50,38 +52,48 @@ private data class PermissionItem(
     val iconBg: Color,
     val name: String,
     val description: String,
-    val manifest: String,
+    val permissions: List<String>,
 )
 
-private val permissionItems = listOf(
-    PermissionItem(
-        icon = Icons.Rounded.CameraAlt,
-        iconBg = Color(0xFFEC4899),
-        name = "Camera",
-        description = "Snap photos to ask about what you see",
-        manifest = Manifest.permission.CAMERA,
-    ),
-    PermissionItem(
-        icon = Icons.Rounded.Mic,
-        iconBg = Color(0xFF7C3AED),
-        name = "Microphone",
-        description = "Talk hands-free with voice conversations",
-        manifest = Manifest.permission.RECORD_AUDIO,
-    ),
-    PermissionItem(
-        icon = Icons.Rounded.Folder,
-        iconBg = Color(0xFFF59E0B),
-        name = "Storage",
-        description = "Build knowledge spaces with your files",
-        manifest = Manifest.permission.READ_EXTERNAL_STORAGE,
-    ),
-)
+private fun getPermissionItems(context: android.content.Context): List<PermissionItem> {
+    val storagePermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        listOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
+    } else {
+        listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+
+    return listOf(
+        PermissionItem(
+            icon = Icons.Rounded.CameraAlt,
+            iconBg = Color(0xFFEC4899),
+            name = "Camera",
+            description = "Snap photos to ask about what you see",
+            permissions = listOf(Manifest.permission.CAMERA),
+        ),
+        PermissionItem(
+            icon = Icons.Rounded.Mic,
+            iconBg = Color(0xFF7C3AED),
+            name = "Microphone",
+            description = "Talk hands-free with voice conversations",
+            permissions = listOf(Manifest.permission.RECORD_AUDIO),
+        ),
+        PermissionItem(
+            icon = Icons.Rounded.Folder,
+            iconBg = Color(0xFFF59E0B),
+            name = "Storage",
+            description = "Build knowledge spaces with your files",
+            permissions = storagePermissions,
+        ),
+    )
+}
 
 @Composable
 fun PermissionsStep(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val permissionItems = remember { getPermissionItems(context) }
     val grantedPermissions = remember { mutableStateOf(setOf<String>()) }
 
     Column(
@@ -118,19 +130,31 @@ fun PermissionsStep(
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             permissionItems.forEach { item ->
-                val isGranted = item.manifest in grantedPermissions.value
-                val launcher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.RequestPermission(),
-                ) { granted ->
-                    if (granted) {
-                        grantedPermissions.value = grantedPermissions.value + item.manifest
-                    }
+                val allGranted = item.permissions.all { it in grantedPermissions.value }
+                val multiplePermissionsLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestMultiplePermissions(),
+                ) { permissions ->
+                    val newlyGranted = permissions.filterValues { it }.keys
+                    grantedPermissions.value = grantedPermissions.value + newlyGranted
                 }
                 PermissionRow(
                     item = item,
-                    isGranted = isGranted,
+                    isGranted = allGranted,
                     onToggle = {
-                        if (!isGranted) launcher.launch(item.manifest)
+                        if (!allGranted) {
+                            if (item.permissions.size == 1) {
+                                val singlePermissionLauncher = rememberLauncherForActivityResult(
+                                    contract = ActivityResultContracts.RequestPermission(),
+                                ) { granted ->
+                                    if (granted) {
+                                        grantedPermissions.value = grantedPermissions.value + item.permissions.first()
+                                    }
+                                }
+                                singlePermissionLauncher.launch(item.permissions.first())
+                            } else {
+                                multiplePermissionsLauncher.launch(item.permissions.toTypedArray())
+                            }
+                        }
                     },
                 )
             }

@@ -141,7 +141,7 @@ private fun DeviceIllustration(
             modifier = Modifier
                 .size(width = 110.dp, height = 180.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color.White),
+                .background(MaterialTheme.colorScheme.surface),
         )
 
         // Floating chat bubble - purple (top left)

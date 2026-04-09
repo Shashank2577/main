@@ -116,7 +116,7 @@ private fun GemmaModelCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.8f),
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {

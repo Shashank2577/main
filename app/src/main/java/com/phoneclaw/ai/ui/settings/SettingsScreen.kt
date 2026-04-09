@@ -190,7 +190,7 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        color = Color.White.copy(alpha = 0.8f),
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.dp
     ) {
         Column(

@@ -23,10 +23,12 @@ import com.phoneclaw.ai.data.repository.ThemeMode
 import com.phoneclaw.ai.ui.chat.ChatScreen
 import com.phoneclaw.ai.ui.common.AppNavigationDrawer
 import com.phoneclaw.ai.ui.modelpicker.ModelPickerSheet
+import com.phoneclaw.ai.ui.navigation.Screen
 import com.phoneclaw.ai.ui.onboarding.OnboardingScreen
 import com.phoneclaw.ai.ui.settings.PerChatSettingsSheet
 import com.phoneclaw.ai.ui.settings.SettingsScreen
 import com.phoneclaw.ai.ui.theme.OpenClawAITheme
+import com.phoneclaw.ai.ui.voice.VoiceConversationScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -106,9 +108,10 @@ private fun MainContent(mainViewModel: MainViewModel) {
                 ChatScreen(
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
-                    onOpenPerChatSettings = { id -> 
-                        activeBottomSheet = BottomSheet.PerChatSettings(id) 
-                    }
+                    onOpenPerChatSettings = { id ->
+                        activeBottomSheet = BottomSheet.PerChatSettings(id)
+                    },
+                    onNavigateToVoice = { navController.navigate(Screen.VoiceConversation.name) }
                 )
             }
             composable("chat/{conversationId}") { backStackEntry ->
@@ -116,7 +119,13 @@ private fun MainContent(mainViewModel: MainViewModel) {
                 ChatScreen(
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
-                    onOpenPerChatSettings = { activeBottomSheet = BottomSheet.PerChatSettings(id) }
+                    onOpenPerChatSettings = { activeBottomSheet = BottomSheet.PerChatSettings(id) },
+                    onNavigateToVoice = { navController.navigate(Screen.VoiceConversation.name) }
+                )
+            }
+            composable(Screen.VoiceConversation.name) {
+                VoiceConversationScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable("settings") {
