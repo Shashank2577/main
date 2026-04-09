@@ -16,85 +16,187 @@
 
 package com.phoneclaw.ai.data
 
+import android.os.Build
+import android.util.Log
+import com.phoneclaw.ai.common.isPixel10
 import com.google.gson.annotations.SerializedName
 
-/**
- * Represents the allowlist of models that are allowed to be downloaded and used in the app.
- */
-data class ModelAllowlist(
-  @SerializedName("models") val models: List<ModelAllowlistEntry> = emptyList()
+private const val TAG = "AGModelAllowlist"
+
+data class DefaultConfig(
+  @SerializedName("topK") val topK: Int?,
+  @SerializedName("topP") val topP: Float?,
+  @SerializedName("temperature") val temperature: Float?,
+  @SerializedName("accelerators") val accelerators: String?,
+  @SerializedName("visionAccelerator") val visionAccelerator: String?,
+  @SerializedName("maxContextLength") val maxContextLength: Int?,
+  @SerializedName("maxTokens") val maxTokens: Int?,
 )
 
-data class ModelDefaultConfig(
-  @SerializedName("topK") val topK: Int = 64,
-  @SerializedName("topP") val topP: Float = 0.95f,
-  @SerializedName("temperature") val temperature: Float = 1.0f,
-  @SerializedName("maxTokens") val maxTokens: Int = 512,
-  @SerializedName("maxContextLength") val maxContextLength: Int = 0,
-  @SerializedName("accelerators") val accelerators: String = "cpu",
-  @SerializedName("visionAccelerator") val visionAccelerator: String = "GPU",
+/** A model file on HF for a specific SOC. */
+data class SocModelFile(
+  @SerializedName("modelFile") val modelFile: String?,
+  @SerializedName("url") val url: String?,
+  @SerializedName("commitHash") val commitHash: String?,
+  @SerializedName("sizeInBytes") val sizeInBytes: Long?,
 )
 
-data class ModelAllowlistEntry(
-  @SerializedName("name") val name: String,
-  // New schema fields
-  @SerializedName("modelId") val modelId: String = "",
-  @SerializedName("modelFile") val modelFile: String = "",
-  @SerializedName("description") val description: String = "",
-  @SerializedName("commitHash") val commitHash: String = "",
-  @SerializedName("minDeviceMemoryInGb") val minDeviceMemoryInGb: Int? = null,
-  @SerializedName("defaultConfig") val defaultConfig: ModelDefaultConfig = ModelDefaultConfig(),
-  // Common fields
-  @SerializedName("sizeInBytes") val sizeInBytes: Long = 0L,
-  @SerializedName("llmSupportImage") val llmSupportImage: Boolean = false,
-  @SerializedName("llmSupportAudio") val llmSupportAudio: Boolean = false,
-  @SerializedName("llmSupportThinking") val llmSupportThinking: Boolean = false,
-  @SerializedName("disabled") val disabled: Boolean = false,
+/** A model in the model allowlist. */
+data class AllowedModel(
+  val name: String,
+  val modelId: String,
+  val modelFile: String,
+  val commitHash: String,
+  val description: String,
+  val sizeInBytes: Long,
+  val defaultConfig: DefaultConfig,
+  val taskTypes: List<String>,
+  val disabled: Boolean? = null,
+  val llmSupportImage: Boolean? = null,
+  val llmSupportAudio: Boolean? = null,
+  val llmSupportTinyGarden: Boolean? = null,
+  val llmSupportMobileActions: Boolean? = null,
+  val llmSupportThinking: Boolean? = null,
+  val minDeviceMemoryInGb: Int? = null,
+  val bestForTaskTypes: List<String>? = null,
+  val localModelFilePathOverride: String? = null,
+  val url: String? = null,
+  val socToModelFiles: Map<String, SocModelFile>? = null,
+  val runtimeType: RuntimeType? = null,
 ) {
   fun toModel(): Model {
-    // Build HuggingFace download URL from modelId + commitHash + modelFile
-    val downloadUrl = if (modelId.isNotEmpty() && commitHash.isNotEmpty() && modelFile.isNotEmpty()) {
-      "https://huggingface.co/$modelId/resolve/$commitHash/$modelFile"
-    } else {
-      ""
-    }
+    // Construct HF download url.
+    var version = commitHash
+    var downloadedFileName = modelFile
+    var downloadUrl =
+      url ?: "https://huggingface.co/$modelId/resolve/$commitHash/$modelFile?download=true"
+    var sizeInBytes = sizeInBytes
 
-    val acceleratorList = defaultConfig.accelerators.split(",").map { it.trim() }.map {
-      when (it.uppercase()) {
-        "GPU" -> Accelerator.GPU
-        "NPU" -> Accelerator.NPU
-        else -> Accelerator.CPU
+    // Handle per-soc model files.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      if (socToModelFiles?.isNotEmpty() == true) {
+        socToModelFiles.get(SOC)?.let { info ->
+          Log.d(TAG, "Found soc-specific model files for model $name: $info")
+          version = info.commitHash ?: "-"
+          downloadedFileName = info.modelFile ?: "-"
+          downloadUrl =
+            info.url
+              ?: "https://huggingface.co/$modelId/resolve/${info.commitHash}/${info.modelFile}?download=true"
+          sizeInBytes = info.sizeInBytes ?: -1
+        }
       }
     }
 
-    val visionAcc = when (defaultConfig.visionAccelerator.uppercase()) {
-      "GPU" -> Accelerator.GPU
-      "NPU" -> Accelerator.NPU
-      else -> Accelerator.CPU
+    // Config.
+    val isLlmModel =
+      taskTypes.contains(BuiltInTaskId.LLM_CHAT) ||
+        taskTypes.contains(BuiltInTaskId.LLM_PROMPT_LAB) ||
+        taskTypes.contains(BuiltInTaskId.LLM_ASK_AUDIO) ||
+        taskTypes.contains(BuiltInTaskId.LLM_ASK_IMAGE) ||
+        taskTypes.contains(BuiltInTaskId.LLM_MOBILE_ACTIONS) ||
+        taskTypes.contains(BuiltInTaskId.LLM_TINY_GARDEN)
+    var configs: MutableList<Config> = mutableListOf()
+    var llmMaxToken = 1024
+    var llmMaxContextLength: Int? = null
+    var accelerators: List<Accelerator> = DEFAULT_ACCELERATORS
+    var visionAccelerator: Accelerator = DEFAULT_VISION_ACCELERATOR
+    if (isLlmModel) {
+      val defaultTopK: Int = defaultConfig.topK ?: DEFAULT_TOPK
+      val defaultTopP: Float = defaultConfig.topP ?: DEFAULT_TOPP
+      val defaultTemperature: Float = defaultConfig.temperature ?: DEFAULT_TEMPERATURE
+      llmMaxToken = defaultConfig.maxTokens ?: 1024
+      llmMaxContextLength = defaultConfig.maxContextLength
+      if (defaultConfig.accelerators != null) {
+        val items = defaultConfig.accelerators.split(",")
+        accelerators = mutableListOf()
+        for (item in items) {
+          if (item == "cpu") {
+            accelerators.add(Accelerator.CPU)
+          } else if (item == "gpu") {
+            accelerators.add(Accelerator.GPU)
+          } else if (item == "npu") {
+            accelerators.add(Accelerator.NPU)
+          }
+        }
+        // Remove GPU from pixel 10 devices.
+        if (isPixel10()) {
+          accelerators.remove(Accelerator.GPU)
+        }
+      }
+      if (defaultConfig.visionAccelerator != null) {
+        val accelerator = defaultConfig.visionAccelerator
+        if (accelerator == "cpu") {
+          visionAccelerator = Accelerator.CPU
+        } else if (accelerator == "gpu") {
+          visionAccelerator = Accelerator.GPU
+        } else if (accelerator == "npu") {
+          visionAccelerator = Accelerator.NPU
+        }
+      }
+      val npuOnly = accelerators.size == 1 && accelerators[0] == Accelerator.NPU
+      configs =
+        (
+          if (npuOnly) {
+            createLlmChatConfigsForNpuModel(
+              defaultMaxToken = llmMaxToken,
+              accelerators = accelerators,
+            )
+          } else {
+            createLlmChatConfigs(
+              defaultTopK = defaultTopK,
+              defaultTopP = defaultTopP,
+              defaultTemperature = defaultTemperature,
+              defaultMaxToken = llmMaxToken,
+              defaultMaxContextLength = llmMaxContextLength,
+              accelerators = accelerators,
+              supportThinking = llmSupportThinking == true,
+            )
+          })
+          .toMutableList()
     }
 
+    var learnMoreUrl = "https://huggingface.co/${modelId}"
+
+    // Misc.
+    var showBenchmarkButton = true
+    var showRunAgainButton = true
+    if (isLlmModel) {
+      showBenchmarkButton = false
+      showRunAgainButton = false
+    }
     return Model(
       name = name,
-      displayName = name,
+      version = version,
       info = description,
       url = downloadUrl,
       sizeInBytes = sizeInBytes,
-      downloadFileName = modelFile.ifEmpty { "_" },
-      version = commitHash.take(8).ifEmpty { "_" },
-      isLlm = true,
-      llmSupportImage = llmSupportImage,
-      llmSupportAudio = llmSupportAudio,
-      llmSupportThinking = llmSupportThinking,
-      llmMaxToken = defaultConfig.maxTokens,
-      accelerators = acceleratorList,
-      visionAccelerator = visionAcc,
       minDeviceMemoryInGb = minDeviceMemoryInGb,
-      runtimeType = if (modelFile.endsWith(".litertlm")) RuntimeType.LITERT_LM else RuntimeType.UNKNOWN,
+      configs = configs,
+      downloadFileName = downloadedFileName,
+      showBenchmarkButton = showBenchmarkButton,
+      showRunAgainButton = showRunAgainButton,
+      learnMoreUrl = learnMoreUrl,
+      llmSupportImage = llmSupportImage == true,
+      llmSupportAudio = llmSupportAudio == true,
+      llmSupportTinyGarden = llmSupportTinyGarden == true,
+      llmSupportMobileActions = llmSupportMobileActions == true,
+      llmSupportThinking = llmSupportThinking == true,
+      llmMaxToken = llmMaxToken,
+      accelerators = accelerators,
+      visionAccelerator = visionAccelerator,
+      bestForTaskIds = bestForTaskTypes ?: listOf(),
+      localModelFilePathOverride = localModelFilePathOverride ?: "",
+      isLlm = isLlmModel,
+      runtimeType = runtimeType ?: RuntimeType.LITERT_LM,
     )
   }
 
-  fun isCompatible(): Boolean {
-    if (disabled) return false
-    return true
+  override fun toString(): String {
+    return "$modelId/$modelFile"
   }
 }
+
+/** The model allowlist. */
+data class ModelAllowlist(
+  val models: List<AllowedModel>,
+)
