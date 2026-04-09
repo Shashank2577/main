@@ -315,11 +315,7 @@ private fun ThemeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
                 selected = selected == mode,
                 onClick = { onSelect(mode) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = ThemeMode.entries.size),
-                label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) },
-                colors = SegmentedButtonDefaults.segmentedButtonColors(
-                    activeContainerColor = Color(0xFF7C3AED),
-                    activeContentColor = Color.White
-                )
+                label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
             )
         }
     }
