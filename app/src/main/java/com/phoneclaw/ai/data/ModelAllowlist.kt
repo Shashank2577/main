@@ -16,11 +16,7 @@
 
 package com.phoneclaw.ai.data
 
-import android.os.Build
 import com.google.gson.annotations.SerializedName
-
-/** Stub for hardware check. */
-private fun isPixel10(): Boolean = false
 
 /**
  * Represents the allowlist of models that are allowed to be downloaded and used in the app.
@@ -29,55 +25,76 @@ data class ModelAllowlist(
   @SerializedName("models") val models: List<ModelAllowlistEntry> = emptyList()
 )
 
+data class ModelDefaultConfig(
+  @SerializedName("topK") val topK: Int = 64,
+  @SerializedName("topP") val topP: Float = 0.95f,
+  @SerializedName("temperature") val temperature: Float = 1.0f,
+  @SerializedName("maxTokens") val maxTokens: Int = 512,
+  @SerializedName("maxContextLength") val maxContextLength: Int = 0,
+  @SerializedName("accelerators") val accelerators: String = "cpu",
+  @SerializedName("visionAccelerator") val visionAccelerator: String = "GPU",
+)
+
 data class ModelAllowlistEntry(
   @SerializedName("name") val name: String,
-  @SerializedName("version") val version: String,
-  @SerializedName("displayName") val displayName: String,
-  @SerializedName("info") val info: String,
-  @SerializedName("url") val url: String,
-  @SerializedName("sizeInBytes") val sizeInBytes: Long,
-  @SerializedName("llmMaxToken") val llmMaxToken: Int = 512,
+  // New schema fields
+  @SerializedName("modelId") val modelId: String = "",
+  @SerializedName("modelFile") val modelFile: String = "",
+  @SerializedName("description") val description: String = "",
+  @SerializedName("commitHash") val commitHash: String = "",
+  @SerializedName("minDeviceMemoryInGb") val minDeviceMemoryInGb: Int? = null,
+  @SerializedName("defaultConfig") val defaultConfig: ModelDefaultConfig = ModelDefaultConfig(),
+  // Common fields
+  @SerializedName("sizeInBytes") val sizeInBytes: Long = 0L,
   @SerializedName("llmSupportImage") val llmSupportImage: Boolean = false,
   @SerializedName("llmSupportAudio") val llmSupportAudio: Boolean = false,
-  @SerializedName("isLlm") val isLlm: Boolean = true,
-  @SerializedName("isExperimental") val isExperimental: Boolean = false,
-  @SerializedName("accelerators") val accelerators: List<String> = emptyList(),
-  @SerializedName("visionAccelerator") val visionAccelerator: String = "CPU",
+  @SerializedName("llmSupportThinking") val llmSupportThinking: Boolean = false,
   @SerializedName("disabled") val disabled: Boolean = false,
-  @SerializedName("pixel10Only") val pixel10Only: Boolean = false,
 ) {
   fun toModel(): Model {
+    // Build HuggingFace download URL from modelId + commitHash + modelFile
+    val downloadUrl = if (modelId.isNotEmpty() && commitHash.isNotEmpty() && modelFile.isNotEmpty()) {
+      "https://huggingface.co/$modelId/resolve/$commitHash/$modelFile"
+    } else {
+      ""
+    }
+
+    val acceleratorList = defaultConfig.accelerators.split(",").map { it.trim() }.map {
+      when (it.uppercase()) {
+        "GPU" -> Accelerator.GPU
+        "NPU" -> Accelerator.NPU
+        else -> Accelerator.CPU
+      }
+    }
+
+    val visionAcc = when (defaultConfig.visionAccelerator.uppercase()) {
+      "GPU" -> Accelerator.GPU
+      "NPU" -> Accelerator.NPU
+      else -> Accelerator.CPU
+    }
+
     return Model(
       name = name,
-      version = version,
-      displayName = displayName,
-      info = info,
-      url = url,
+      displayName = name,
+      info = description,
+      url = downloadUrl,
       sizeInBytes = sizeInBytes,
-      llmMaxToken = llmMaxToken,
+      downloadFileName = modelFile.ifEmpty { "_" },
+      version = commitHash.take(8).ifEmpty { "_" },
+      isLlm = true,
       llmSupportImage = llmSupportImage,
       llmSupportAudio = llmSupportAudio,
-      isLlm = isLlm,
-      accelerators =
-        accelerators.map {
-          when (it.uppercase()) {
-            "GPU" -> Accelerator.GPU
-            "NPU" -> Accelerator.NPU
-            else -> Accelerator.CPU
-          }
-        },
-      visionAccelerator =
-        when (visionAccelerator.uppercase()) {
-          "GPU" -> Accelerator.GPU
-          "NPU" -> Accelerator.NPU
-          else -> Accelerator.CPU
-        }
+      llmSupportThinking = llmSupportThinking,
+      llmMaxToken = defaultConfig.maxTokens,
+      accelerators = acceleratorList,
+      visionAccelerator = visionAcc,
+      minDeviceMemoryInGb = minDeviceMemoryInGb,
+      runtimeType = if (modelFile.endsWith(".litertlm")) RuntimeType.LITERT_LM else RuntimeType.UNKNOWN,
     )
   }
 
   fun isCompatible(): Boolean {
     if (disabled) return false
-    if (pixel10Only && !isPixel10()) return false
     return true
   }
 }
