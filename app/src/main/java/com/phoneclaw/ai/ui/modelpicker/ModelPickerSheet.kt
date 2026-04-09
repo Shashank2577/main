@@ -187,7 +187,7 @@ private fun ClayModelItem(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = model.displayName,
+                        text = model.displayName.ifEmpty { model.name },
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Bold,
                             fontFamily = NunitoFontFamily
