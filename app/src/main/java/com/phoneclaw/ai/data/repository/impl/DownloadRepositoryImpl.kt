@@ -19,7 +19,7 @@ class DownloadRepositoryImpl @Inject constructor(
 
     override fun downloadModel(model: Model) {
         val task = Task(id = "chat", label = "Chat", description = "LLM Chat", models = mutableListOf(model), category = Category.LLM)
-        downloadRepository.downloadModel(task, model) { /* handled by download repo */ }
+        downloadRepository.downloadModel(task, model) { _, _ -> /* handled by download repo */ }
     }
 
     override fun cancelDownload(modelName: String) {

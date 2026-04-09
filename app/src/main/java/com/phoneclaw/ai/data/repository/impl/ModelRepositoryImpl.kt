@@ -116,28 +116,25 @@ class ModelRepositoryImpl @Inject constructor(
         onComplete: () -> Unit,
         onError: (String) -> Unit,
     ) {
-        downloadRepository.downloadModel(
-            task = Task(id = "chat", label = "Chat", description = "LLM Chat", models = mutableListOf(model), category = Category.LLM),
-            model = model,
-            onStatusUpdated = { status ->
-                _downloadStatuses.update { it + (model.name to status) }
-                if (status.totalBytes > 0) {
-                    val progress = status.receivedBytes.toFloat() / status.totalBytes
-                    _downloadProgress.update { it + (model.name to progress) }
-                    onProgress(progress)
-                }
-                if (status.status == ModelDownloadStatusType.SUCCEEDED) {
-                    onComplete()
-                } else if (status.status == ModelDownloadStatusType.FAILED) {
-                    onError(status.errorMessage)
-                }
+        val task = Task(id = "chat", label = "Chat", description = "LLM Chat", models = mutableListOf(model), category = Category.LLM)
+        downloadRepository.downloadModel(task, model) { _, status ->
+            _downloadStatuses.update { it + (model.name to status) }
+            if (status.totalBytes > 0) {
+                val progress = status.receivedBytes.toFloat() / status.totalBytes
+                _downloadProgress.update { it + (model.name to progress) }
+                onProgress(progress)
             }
-        )
+            if (status.status == ModelDownloadStatusType.SUCCEEDED) {
+                onComplete()
+            } else if (status.status == ModelDownloadStatusType.FAILED) {
+                onError(status.errorMessage)
+            }
+        }
     }
 
     override suspend fun cancelDownload(modelName: String) {
         val model = getModel(modelName) ?: return
-        downloadRepository.cancelDownload(model)
+        downloadRepository.cancelDownloadModel(model)
     }
 
     override suspend fun deleteDownloadedModel(modelName: String) {
