@@ -360,8 +360,6 @@ private fun ClaymorphicInputBar(
     }
 }
 
-private enum class TrailingAction { STOP, SEND, MIC }
-
 @Composable
 private fun ChatTopBar(
     title: String,

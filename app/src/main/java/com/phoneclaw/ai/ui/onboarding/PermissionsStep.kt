@@ -137,19 +137,19 @@ fun PermissionsStep(
                     val newlyGranted = permissions.filterValues { it }.keys
                     grantedPermissions.value = grantedPermissions.value + newlyGranted
                 }
+                val singlePermissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission(),
+                ) { granted ->
+                    if (granted) {
+                        grantedPermissions.value = grantedPermissions.value + item.permissions.first()
+                    }
+                }
                 PermissionRow(
                     item = item,
                     isGranted = allGranted,
                     onToggle = {
                         if (!allGranted) {
                             if (item.permissions.size == 1) {
-                                val singlePermissionLauncher = rememberLauncherForActivityResult(
-                                    contract = ActivityResultContracts.RequestPermission(),
-                                ) { granted ->
-                                    if (granted) {
-                                        grantedPermissions.value = grantedPermissions.value + item.permissions.first()
-                                    }
-                                }
                                 singlePermissionLauncher.launch(item.permissions.first())
                             } else {
                                 multiplePermissionsLauncher.launch(item.permissions.toTypedArray())
