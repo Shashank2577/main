@@ -103,6 +103,7 @@ fun ModelPickerSheet(
                             viewModel.selectModel(model.name)
                             onDismiss()
                         },
+                        onDownload = {},
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
