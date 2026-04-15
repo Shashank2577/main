@@ -255,7 +255,7 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .imePadding(),
-            color = MaterialTheme.colorScheme.surface
+            color = CanvasBg
         ) {
             Box(
                 modifier = Modifier.fillMaxSize()
@@ -292,19 +292,35 @@ fun ChatScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(CanvasBg.copy(alpha = 0.9f)),
+                            .background(CanvasBg.copy(alpha = 0.92f)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        Surface(
+                            shape = RoundedCornerShape(28.dp),
+                            color = SurfaceVioletCard,
+                            shadowElevation = 8.dp,
                         ) {
-                            CircularProgressIndicator(color = AccentViolet, modifier = Modifier.size(48.dp))
-                            Text(
-                                "Loading model...",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = ForegroundSecondary,
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.padding(horizontal = 40.dp, vertical = 32.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    color = AccentViolet,
+                                    modifier = Modifier.size(48.dp),
+                                    strokeWidth = 3.dp,
+                                )
+                                Text(
+                                    "Loading model...",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = ForegroundPrimary,
+                                )
+                                Text(
+                                    "This may take a moment",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = ForegroundSecondary,
+                                )
+                            }
                         }
                     }
                 }
@@ -358,8 +374,9 @@ private fun ModeSwitcherRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(CanvasBg)
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         modes.forEach { (mode, label, icon) ->
@@ -371,6 +388,15 @@ private fun ModeSwitcherRow(
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = AccentViolet,
                     selectedLabelColor = ForegroundInverse,
+                    selectedLeadingIconColor = ForegroundInverse,
+                    containerColor = SurfaceCard,
+                    labelColor = ForegroundSecondary,
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = currentMode == mode,
+                    borderColor = Color.Transparent,
+                    selectedBorderColor = Color.Transparent,
                 ),
             )
         }

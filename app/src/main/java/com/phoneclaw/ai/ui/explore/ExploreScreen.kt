@@ -16,6 +16,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,7 @@ fun ExploreScreen(
                         onClick = onOpenDrawer,
                         shape = RoundedCornerShape(12.dp),
                         color = SurfaceCard,
-                        shadowElevation = 2.dp,
+                        shadowElevation = 3.dp,
                         modifier = Modifier.size(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -64,7 +66,7 @@ fun ExploreScreen(
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontFamily = NunitoFontFamily,
-                            fontSize = 18.sp
+                            fontSize = 20.sp
                         ),
                         color = ForegroundPrimary,
                     )
@@ -77,42 +79,60 @@ fun ExploreScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // Section header
+            Text(
+                text = "What would you like to do?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = ForegroundSecondary,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+            )
+
             TaskCard(
                 icon = Icons.Rounded.AutoAwesome,
                 iconColor = AccentViolet,
+                cardColor = SurfaceVioletCard,
+                shadowColor = ShadowVioletCard,
                 title = "AI Chat",
-                description = "Chat with a local AI model",
+                description = "Ask anything, get intelligent answers from a local AI model",
                 onClick = { onNavigateToChatWithMode(ChatMode.CHAT) },
             )
             TaskCard(
                 icon = Icons.Outlined.Psychology,
                 iconColor = AccentPink,
+                cardColor = SurfacePinkCard,
+                shadowColor = ShadowPinkCard,
                 title = "Agent Skills",
-                description = "Complete tasks using AI agents",
+                description = "Complete tasks with AI-powered skills: maps, web, email, and more",
                 onClick = { onNavigateToChatWithMode(ChatMode.AGENT) },
             )
             TaskCard(
                 icon = Icons.Outlined.Image,
                 iconColor = AccentBlue,
+                cardColor = SurfaceBlueCard,
+                shadowColor = ShadowBlueCard,
                 title = "Ask Image",
-                description = "Ask questions about images",
+                description = "Attach a photo and ask questions about what you see",
                 onClick = { onNavigateToChatWithMode(ChatMode.ASK_IMAGE) },
             )
             TaskCard(
                 icon = Icons.Outlined.Science,
                 iconColor = AccentGreen,
+                cardColor = SurfaceGreenCard,
+                shadowColor = ShadowGreenCard,
                 title = "Prompt Lab",
-                description = "Single-turn prompt testing",
+                description = "Experiment with templates: rewrite tone, summarize, generate code",
                 onClick = { onNavigateToChatWithMode(ChatMode.PROMPT_LAB) },
             )
             TaskCard(
                 icon = Icons.Outlined.Mic,
                 iconColor = AccentAmber,
+                cardColor = SurfaceAmberCard,
+                shadowColor = ShadowAmberCard,
                 title = "Voice",
-                description = "Talk with your AI assistant",
+                description = "Speak naturally with your AI assistant",
                 onClick = onNavigateToVoice,
             )
         }
@@ -122,51 +142,62 @@ fun ExploreScreen(
 @Composable
 private fun TaskCard(
     icon: ImageVector,
-    iconColor: androidx.compose.ui.graphics.Color,
+    iconColor: Color,
+    cardColor: Color,
+    shadowColor: Color,
     title: String,
     description: String,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        color = SurfaceCard,
-        shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
+    Box(
+        modifier = Modifier
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                ambientColor = shadowColor,
+                spotColor = shadowColor,
+            )
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        Surface(
+            onClick = onClick,
+            shape = RoundedCornerShape(24.dp),
+            color = cardColor,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(iconColor.copy(alpha = 0.15f), RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center,
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconColor,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                    ),
-                    color = ForegroundPrimary,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ForegroundSecondary,
-                )
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(iconColor.copy(alpha = 0.18f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                        ),
+                        color = ForegroundPrimary,
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
+                        color = ForegroundSecondary,
+                    )
+                }
             }
         }
     }

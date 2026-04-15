@@ -7,12 +7,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BrokenImage
-import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,12 +20,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
@@ -79,13 +79,13 @@ private fun UserBubble(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(160.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(20.dp))
                     .clickable { onImageClick(message.mediaUri) },
                 error = {
                     Box(
                         modifier = Modifier
                             .size(160.dp)
-                            .background(SurfaceCard, RoundedCornerShape(12.dp)),
+                            .background(SurfaceCard, RoundedCornerShape(20.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(Icons.Outlined.BrokenImage, null, tint = ForegroundMuted)
@@ -95,18 +95,27 @@ private fun UserBubble(
         }
 
         if (message.content.isNotBlank()) {
-            Surface(
-                shape = RoundedCornerShape(20.dp, 4.dp, 20.dp, 20.dp),
-                color = AccentViolet,
-                shadowElevation = 1.dp,
-                modifier = Modifier.widthIn(max = 300.dp)
+            Box(
+                modifier = Modifier
+                    .shadow(
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(20.dp, 4.dp, 20.dp, 20.dp),
+                        ambientColor = ShadowButtonDrop,
+                        spotColor = ShadowButtonDrop,
+                    )
             ) {
-                Text(
-                    text = message.content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                )
+                Surface(
+                    shape = RoundedCornerShape(20.dp, 4.dp, 20.dp, 20.dp),
+                    color = AccentViolet,
+                    modifier = Modifier.widthIn(max = 300.dp)
+                ) {
+                    Text(
+                        text = message.content,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
             }
         }
     }
@@ -136,15 +145,25 @@ private fun AssistantBubble(
 
         // Main Response
         if (message.content.isNotBlank()) {
-            Surface(
-                shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
-                color = SurfaceCard,
-                modifier = Modifier.widthIn(max = 320.dp)
+            Box(
+                modifier = Modifier
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
+                        ambientColor = ShadowCardDrop,
+                        spotColor = ShadowCardDrop,
+                    )
             ) {
-                MarkdownText(
-                    text = message.content,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
+                    color = SurfaceWhite,
+                    modifier = Modifier.widthIn(max = 320.dp)
+                ) {
+                    MarkdownText(
+                        text = message.content,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
             }
         }
 
@@ -156,31 +175,43 @@ private fun AssistantBubble(
 
 @Composable
 private fun ThinkingBubble(thought: String) {
-    Surface(
-        shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
-        color = SurfaceCard,
-        modifier = Modifier.widthIn(max = 320.dp)
+    Box(
+        modifier = Modifier
+            .shadow(
+                elevation = 3.dp,
+                shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
+                ambientColor = ShadowVioletCard,
+                spotColor = ShadowVioletCard,
+            )
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Surface(
+            shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
+            color = SurfaceVioletCard,
+            modifier = Modifier.widthIn(max = 320.dp)
         ) {
-            Icon(
-                imageVector = Icons.Rounded.AutoAwesome,
-                contentDescription = null,
-                tint = AccentViolet,
-                modifier = Modifier.size(16.dp).padding(top = 2.dp)
-            )
-            Text(
-                text = thought,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontStyle = FontStyle.Italic,
-                    lineHeight = 20.sp,
-                    fontSize = 14.sp
-                ),
-                color = ForegroundSecondary
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoAwesome,
+                    contentDescription = null,
+                    tint = AccentViolet,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .padding(top = 2.dp)
+                )
+                Text(
+                    text = thought,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontStyle = FontStyle.Italic,
+                        lineHeight = 20.sp,
+                        fontSize = 14.sp
+                    ),
+                    color = ForegroundSecondary
+                )
+            }
         }
     }
 }
@@ -198,9 +229,22 @@ private fun StreamingIndicator() {
         label = "alpha",
     )
 
-    Box(
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .size(8.dp)
-            .background(AccentViolet.copy(alpha = alpha), RoundedCornerShape(4.dp)),
-    )
+            .background(SurfaceWhite, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        repeat(3) { i ->
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(
+                        AccentViolet.copy(alpha = alpha - (i * 0.1f).coerceAtLeast(0f)),
+                        RoundedCornerShape(3.dp)
+                    ),
+            )
+        }
+    }
 }

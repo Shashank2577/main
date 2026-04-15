@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -162,12 +163,19 @@ private fun ClayModelItem(
     modifier: Modifier = Modifier
 ) {
     val isDownloadable = downloadStatus.status == NOT_DOWNLOADED || downloadStatus.status == FAILED
+    Box(
+        modifier = modifier.shadow(
+            elevation = if (isActive) 6.dp else 3.dp,
+            shape = RoundedCornerShape(24.dp),
+            ambientColor = if (isActive) ShadowVioletCard else ShadowCardDrop,
+            spotColor = if (isActive) ShadowVioletCard else ShadowCardDrop,
+        )
+    ) {
     Surface(
         onClick = if (isDownloadable) onDownload else onSelect,
-        shape = RoundedCornerShape(32.dp),
-        color = if (isActive) Color.White.copy(alpha = 0.95f) else Color.White.copy(alpha = 0.8f),
-        shadowElevation = 0.dp,
-        modifier = modifier.fillMaxWidth()
+        shape = RoundedCornerShape(24.dp),
+        color = if (isActive) SurfaceVioletCard else SurfaceCard,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -238,6 +246,7 @@ private fun ClayModelItem(
             }
         }
     }
+    } // end Box
 }
 
 @Composable
