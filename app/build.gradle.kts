@@ -75,7 +75,7 @@ android {
         val variant = this
         variant.outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            output.outputFileName = "PhoneClaw-AI-v${variant.versionName}-${variant.buildType.name}.apk"
+            output.outputFileName = "ClawAssistant-v${variant.versionName}-${variant.buildType.name}.apk"
         }
     }
 
