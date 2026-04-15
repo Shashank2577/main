@@ -1,16 +1,21 @@
 package com.phoneclaw.ai.ui.chat
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -25,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -41,11 +47,9 @@ import com.phoneclaw.ai.ui.common.BaseOpenClawWebViewClient
 import com.phoneclaw.ai.ui.common.EmptyState
 import com.phoneclaw.ai.ui.common.OpenClawWebView
 import com.phoneclaw.ai.ui.theme.*
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
-import java.util.UUID
 
 private val chatViewJavascriptInterface = ChatWebViewJavascriptInterface()
 
@@ -56,21 +60,44 @@ fun ChatScreen(
     onOpenModelPicker: () -> Unit,
     onOpenPerChatSettings: (String) -> Unit = {},
     onNavigateToVoice: () -> Unit = {},
-    agentMode: Boolean = false,
+    initialMode: ChatMode = ChatMode.CHAT,
     viewModel: ChatViewModel = hiltViewModel(),
 ) {
-    // Set agent mode on the ViewModel
-    LaunchedEffect(agentMode) { viewModel.agentMode = agentMode }
+    // Initialize mode and preload model
+    LaunchedEffect(initialMode) { viewModel.setChatMode(initialMode) }
+    LaunchedEffect(Unit) { viewModel.preloadModel() }
+    val currentModelForEffect by viewModel.currentModel.collectAsStateWithLifecycle()
+    LaunchedEffect(currentModelForEffect) { if (currentModelForEffect != null) viewModel.preloadModel() }
 
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val isStreaming by viewModel.isStreaming.collectAsStateWithLifecycle()
     val currentModel by viewModel.currentModel.collectAsStateWithLifecycle()
     val conversationTitle by viewModel.conversationTitle.collectAsStateWithLifecycle()
+    val chatMode by viewModel.chatMode.collectAsStateWithLifecycle()
+    val modelInitState by viewModel.modelInitState.collectAsStateWithLifecycle()
+    val attachedImageBitmap by viewModel.attachedImageBitmap.collectAsStateWithLifecycle()
+    val attachedImageUri by viewModel.attachedImageUri.collectAsStateWithLifecycle()
 
     var inputText by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
+
+    // Prompt Lab state
+    var selectedPromptTemplate by remember { mutableStateOf(PromptTemplateType.FREE_FORM) }
+    var selectedPromptOption by remember { mutableStateOf("") }
+
+    // Image picker
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.openInputStream(it)?.use { stream ->
+                val bitmap = BitmapFactory.decodeStream(stream)
+                if (bitmap != null) viewModel.attachImage(bitmap, it.toString())
+            }
+        }
+    }
 
     // Agent Skills State
     var showAskInfoDialog by remember { mutableStateOf(false) }
@@ -86,7 +113,6 @@ fun ChatScreen(
             when (action) {
                 is CallJsAgentAction -> {
                     try {
-                        // Load url.
                         suspendCancellableCoroutine<Unit> { continuation ->
                             chatWebViewClient.setPageLoadListener {
                                 chatWebViewClient.setPageLoadListener(null)
@@ -95,7 +121,6 @@ fun ChatScreen(
                             webViewRef?.loadUrl(action.url)
                         }
 
-                        // Execute JS.
                         chatViewJavascriptInterface.onResultListener = { result ->
                             action.result.complete(result)
                         }
@@ -146,28 +171,83 @@ fun ChatScreen(
                     onMenuClick = onOpenDrawer,
                     onModelClick = onOpenModelPicker
                 )
-                QuickActionChipsRow(
-                    onAction = { prompt ->
-                        viewModel.sendMessage(prompt)
-                        focusManager.clearFocus()
+                // Mode-conditional content below top bar
+                when (chatMode) {
+                    ChatMode.CHAT, ChatMode.ASK_IMAGE -> QuickActionChipsRow(
+                        onAction = { prompt ->
+                            viewModel.sendMessage(prompt)
+                            focusManager.clearFocus()
+                        }
+                    )
+                    ChatMode.PROMPT_LAB -> {
+                        val template = PROMPT_TEMPLATES.first { it.type == selectedPromptTemplate }
+                        PromptLabTemplateBar(selectedPromptTemplate) {
+                            selectedPromptTemplate = it
+                            selectedPromptOption = ""
+                        }
+                        if (template.options.isNotEmpty()) {
+                            PromptLabOptionsRow(template, selectedPromptOption) { selectedPromptOption = it }
+                        }
                     }
-                )
+                    ChatMode.AGENT -> {
+                        AgentSkillChipsSection(
+                            onChipClick = { prompt ->
+                                viewModel.sendMessage(prompt)
+                                focusManager.clearFocus()
+                            }
+                        )
+                    }
+                }
             }
         },
         bottomBar = {
-            ClaymorphicInputBar(
-                text = inputText,
-                onTextChange = { inputText = it },
-                onSend = { text ->
-                    viewModel.sendMessage(text)
-                    inputText = ""
-                    focusManager.clearFocus()
-                },
-                onAttach = { /* File picker */ },
-                onVoiceToggle = onNavigateToVoice,
-                onStop = viewModel::stopGeneration,
-                isStreaming = isStreaming,
-            )
+            Column {
+                // Mode switcher
+                ModeSwitcherRow(chatMode) { viewModel.setChatMode(it) }
+
+                // Image attachment preview
+                if (attachedImageUri != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        coil.compose.AsyncImage(
+                            model = attachedImageUri,
+                            contentDescription = "Attached image",
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop,
+                        )
+                        IconButton(onClick = { viewModel.clearAttachment() }) {
+                            Icon(Icons.Rounded.Close, contentDescription = "Remove attachment")
+                        }
+                        Text("Image attached", style = MaterialTheme.typography.bodySmall, color = ForegroundSecondary)
+                    }
+                }
+
+                ClaymorphicInputBar(
+                    text = inputText,
+                    onTextChange = { inputText = it },
+                    onSend = { rawInput ->
+                        val finalText = if (chatMode == ChatMode.PROMPT_LAB) {
+                            val template = PROMPT_TEMPLATES.first { it.type == selectedPromptTemplate }
+                            buildPrompt(template, selectedPromptOption, rawInput)
+                        } else rawInput
+                        val images = listOfNotNull(attachedImageBitmap)
+                        viewModel.sendMessage(finalText, images)
+                        inputText = ""
+                        focusManager.clearFocus()
+                    },
+                    onAttach = { imagePicker.launch("image/*") },
+                    onVoiceToggle = onNavigateToVoice,
+                    onStop = viewModel::stopGeneration,
+                    isStreaming = isStreaming,
+                )
+            }
         }
     ) { innerPadding ->
         Surface(
@@ -198,6 +278,32 @@ fun ChatScreen(
                             MessageBubble(
                                 message = message,
                                 isStreaming = isStreaming && message.isStreaming
+                            )
+                        }
+                    }
+                }
+
+                // Loading overlay
+                AnimatedVisibility(
+                    visible = modelInitState is ModelInitState.Loading,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(CanvasBg.copy(alpha = 0.9f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            CircularProgressIndicator(color = AccentViolet, modifier = Modifier.size(48.dp))
+                            Text(
+                                "Loading model...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = ForegroundSecondary,
                             )
                         }
                     }
@@ -235,6 +341,86 @@ fun ChatScreen(
                 currentAskInfoAction = null
             }
         )
+    }
+}
+
+@Composable
+private fun ModeSwitcherRow(
+    currentMode: ChatMode,
+    onModeChange: (ChatMode) -> Unit,
+) {
+    val modes = listOf(
+        Triple(ChatMode.CHAT, "Chat", Icons.Rounded.AutoAwesome),
+        Triple(ChatMode.ASK_IMAGE, "Image", Icons.Outlined.Image),
+        Triple(ChatMode.PROMPT_LAB, "Prompt Lab", Icons.Outlined.Science),
+        Triple(ChatMode.AGENT, "Agent", Icons.Outlined.Psychology),
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        modes.forEach { (mode, label, icon) ->
+            FilterChip(
+                selected = currentMode == mode,
+                onClick = { onModeChange(mode) },
+                label = { Text(label, fontSize = 12.sp) },
+                leadingIcon = { Icon(icon, null, modifier = Modifier.size(16.dp)) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = AccentViolet,
+                    selectedLabelColor = ForegroundInverse,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AgentSkillChipsSection(onChipClick: (String) -> Unit) {
+    val tryOutChips = listOf(
+        "Interactive Map" to "Show me Googleplex on interactive map",
+        "Kitchen Adventure" to "Start kitchen adventure",
+        "Calculate Hash" to "What is the sha1 hash of 'gemma'?",
+        "Text Spinner" to "Spin 'Gemma' on my head",
+        "Send Email" to "Send email 'Good morning' to abc@example.com with subject 'Hello'",
+        "Track Mood" to "Track my mood today",
+        "Wikipedia" to "Check Wikipedia about Oscars 2026",
+        "QR Code" to "Generate QR code for https://gemma.google.com",
+    )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            tryOutChips.forEach { (label, prompt) ->
+                Surface(
+                    onClick = { onChipClick(prompt) },
+                    shape = RoundedCornerShape(24.dp),
+                    color = AccentPink,
+                    modifier = Modifier.height(32.dp),
+                ) {
+                    Box(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 11.sp), color = ForegroundInverse)
+                    }
+                }
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Info, null, tint = ForegroundMuted, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Agent mode uses AI skills. Skills must be downloaded to work.", style = MaterialTheme.typography.bodySmall, color = ForegroundMuted)
+        }
     }
 }
 
@@ -277,7 +463,7 @@ private fun ClaymorphicInputBar(
                 )
             }
 
-            // Text field — Claymorphic recessed look
+            // Text field
             OutlinedTextField(
                 value = text,
                 onValueChange = onTextChange,
@@ -329,7 +515,6 @@ private fun ClaymorphicInputBar(
                         )
                     }
 
-                    // Send Button with gradient
                     ClaymorphicTrailingAction.SEND -> Box(
                         modifier = Modifier
                             .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
@@ -346,7 +531,6 @@ private fun ClaymorphicInputBar(
                         )
                     }
 
-                    // Mic
                     ClaymorphicTrailingAction.MIC -> IconButton(
                         onClick = onVoiceToggle,
                         modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),

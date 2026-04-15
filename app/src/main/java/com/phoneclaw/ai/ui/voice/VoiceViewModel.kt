@@ -75,6 +75,9 @@ class VoiceViewModel @Inject constructor(
     private var textToSpeech: TextToSpeech? = null
     private var ttsReady = false
 
+    private var _modelInitialized = false
+    private var _initializedModelId: String? = null
+
     init {
         initTts()
     }
@@ -166,35 +169,48 @@ class VoiceViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(voiceState = VoiceState.IDLE)
             return
         }
-
         val activeModel = modelRepository.activeModel.value ?: run {
-            _uiState.value = _uiState.value.copy(
-                voiceState = VoiceState.IDLE,
-                errorMessage = "No model selected",
-            )
+            _uiState.value = _uiState.value.copy(voiceState = VoiceState.IDLE, errorMessage = "No model selected")
             return
         }
-
         _uiState.value = _uiState.value.copy(voiceState = VoiceState.PROCESSING)
         _aiResponse.value = ""
 
+        val needsInit = !_modelInitialized || _initializedModelId != activeModel.name
+        if (needsInit) {
+            llmModelHelper.initialize(
+                context = context,
+                model = activeModel,
+                supportImage = false,
+                supportAudio = false,
+                onDone = { error ->
+                    if (error.isNotEmpty()) {
+                        _uiState.value = _uiState.value.copy(voiceState = VoiceState.IDLE, errorMessage = "Could not load model: $error")
+                        return@initialize
+                    }
+                    _modelInitialized = true
+                    _initializedModelId = activeModel.name
+                    runVoiceInference(activeModel, text)
+                },
+                coroutineScope = viewModelScope,
+            )
+        } else {
+            runVoiceInference(activeModel, text)
+        }
+    }
+
+    private fun runVoiceInference(model: com.phoneclaw.ai.data.Model, text: String) {
         viewModelScope.launch {
             llmModelHelper.runInference(
-                model = activeModel,
+                model = model,
                 input = text,
                 resultListener = { partial, done, _ ->
                     _aiResponse.value = _aiResponse.value + partial
-                    if (done) {
-                        val fullResponse = _aiResponse.value
-                        speakResponse(fullResponse)
-                    }
+                    if (done) speakResponse(_aiResponse.value)
                 },
                 cleanUpListener = {},
                 onError = { error ->
-                    _uiState.value = _uiState.value.copy(
-                        voiceState = VoiceState.IDLE,
-                        errorMessage = error,
-                    )
+                    _uiState.value = _uiState.value.copy(voiceState = VoiceState.IDLE, errorMessage = error)
                 },
                 coroutineScope = viewModelScope,
             )

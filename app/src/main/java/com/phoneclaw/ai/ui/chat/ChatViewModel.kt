@@ -2,6 +2,7 @@ package com.phoneclaw.ai.ui.chat
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,6 +25,15 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+
+enum class ChatMode { CHAT, ASK_IMAGE, PROMPT_LAB, AGENT }
+
+sealed interface ModelInitState {
+    data object Idle : ModelInitState
+    data object Loading : ModelInitState
+    data object Ready : ModelInitState
+    data class Error(val message: String) : ModelInitState
+}
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -54,8 +64,20 @@ class ChatViewModel @Inject constructor(
     private var _modelInitialized = false
     private var _initializedModelId: String? = null
 
+    private val _chatMode = MutableStateFlow(ChatMode.CHAT)
+    val chatMode: StateFlow<ChatMode> = _chatMode.asStateFlow()
+
+    private val _modelInitState = MutableStateFlow<ModelInitState>(ModelInitState.Idle)
+    val modelInitState: StateFlow<ModelInitState> = _modelInitState.asStateFlow()
+
+    private val _attachedImageBitmap = MutableStateFlow<Bitmap?>(null)
+    val attachedImageBitmap: StateFlow<Bitmap?> = _attachedImageBitmap.asStateFlow()
+
+    private val _attachedImageUri = MutableStateFlow<String?>(null)
+    val attachedImageUri: StateFlow<String?> = _attachedImageUri.asStateFlow()
+
     /** When true, tools and constrained decoding are always enabled regardless of skill selection. */
-    var agentMode: Boolean = false
+    val agentMode: Boolean get() = _chatMode.value == ChatMode.AGENT
 
     init {
         agentTools.context = context
@@ -66,12 +88,69 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun setChatMode(mode: ChatMode) {
+        _chatMode.value = mode
+        _messages.value = emptyList()
+        _attachedImageBitmap.value = null
+        _attachedImageUri.value = null
+        if (_modelInitialized && _initializedModelId == currentModel.value?.name) {
+            _modelInitState.value = ModelInitState.Ready
+        } else {
+            _modelInitState.value = ModelInitState.Idle
+        }
+    }
+
+    fun attachImage(bitmap: Bitmap, uri: String) {
+        _attachedImageBitmap.value = bitmap
+        _attachedImageUri.value = uri
+    }
+
+    fun clearAttachment() {
+        _attachedImageBitmap.value = null
+        _attachedImageUri.value = null
+    }
+
+    fun preloadModel() {
+        val model = currentModel.value ?: return
+        val needsInit = !_modelInitialized || _initializedModelId != model.name
+        if (!needsInit) {
+            _modelInitState.value = ModelInitState.Ready
+            return
+        }
+        if (_modelInitState.value is ModelInitState.Loading) return
+
+        _modelInitState.value = ModelInitState.Loading
+
+        val selectedSkills = skillManagerViewModel.getSelectedSkills()
+        val useTools = agentMode || selectedSkills.isNotEmpty()
+
+        llmModelHelper.initialize(
+            context = context,
+            model = model,
+            supportImage = model.llmSupportImage,
+            supportAudio = model.llmSupportAudio,
+            onDone = { error ->
+                if (error.isNotEmpty()) {
+                    _modelInitState.value = ModelInitState.Error(error)
+                    return@initialize
+                }
+                _modelInitialized = true
+                _initializedModelId = model.name
+                _modelInitState.value = ModelInitState.Ready
+            },
+            systemInstruction = if (useTools) skillManagerViewModel.getSystemPrompt("You are a helpful AI assistant with access to tools.") else null,
+            tools = if (useTools) listOf(tool(agentTools)) else emptyList(),
+            enableConversationConstrainedDecoding = useTools,
+            coroutineScope = viewModelScope
+        )
+    }
+
     private suspend fun startNewConversation() {
         val id = conversationRepository.createConversation("default", "New Chat")
         _currentConversationId.value = id
     }
 
-    fun sendMessage(text: String) {
+    fun sendMessage(text: String, images: List<Bitmap> = emptyList()) {
         val model = currentModel.value ?: return
         if (text.isBlank()) return
 
@@ -88,9 +167,13 @@ class ChatViewModel @Inject constructor(
                 conversationId = conversationId,
                 role = MessageRole.USER,
                 content = text,
+                mediaUri = _attachedImageUri.value,
                 timestamp = userTimestamp
             )
             _messages.update { it + userMsg }
+            _attachedImageUri.value = null
+            _attachedImageBitmap.value = null
+
             conversationRepository.addMessage(
                 MessageEntity(
                     id = userId,
@@ -118,6 +201,7 @@ class ChatViewModel @Inject constructor(
             var fullThought = ""
 
             val selectedSkills = skillManagerViewModel.getSelectedSkills()
+            val useTools = agentMode || selectedSkills.isNotEmpty()
 
             val needsInit = !_modelInitialized || _initializedModelId != model.name
             if (needsInit) {
@@ -130,6 +214,7 @@ class ChatViewModel @Inject constructor(
                         if (error.isNotEmpty()) {
                             Log.e("ChatViewModel", "Init error: $error")
                             _isStreaming.value = false
+                            _modelInitState.value = ModelInitState.Error(error)
                             _messages.update { list ->
                                 list.map {
                                     if (it.id == assistantId) it.copy(
@@ -142,6 +227,7 @@ class ChatViewModel @Inject constructor(
                         }
                         _modelInitialized = true
                         _initializedModelId = model.name
+                        _modelInitState.value = ModelInitState.Ready
 
                         llmModelHelper.runInference(
                             model = model,
@@ -198,15 +284,21 @@ class ChatViewModel @Inject constructor(
                                     list.map { if (it.id == assistantId) it.copy(content = "Error: $err", isStreaming = false) else it }
                                 }
                             },
+                            images = images,
                             coroutineScope = viewModelScope
                         )
                     },
-                    systemInstruction = if (agentMode || selectedSkills.isNotEmpty()) skillManagerViewModel.getSystemPrompt("You are a helpful AI assistant with access to tools.") else null,
-                    tools = if (agentMode || selectedSkills.isNotEmpty()) listOf(tool(agentTools)) else emptyList(),
-                    enableConversationConstrainedDecoding = agentMode || selectedSkills.isNotEmpty(),
+                    systemInstruction = if (useTools) skillManagerViewModel.getSystemPrompt("You are a helpful AI assistant with access to tools.") else null,
+                    tools = if (useTools) listOf(tool(agentTools)) else emptyList(),
+                    enableConversationConstrainedDecoding = useTools,
                     coroutineScope = viewModelScope
                 )
             } else {
+                // In PROMPT_LAB mode, reset conversation before each inference
+                if (_chatMode.value == ChatMode.PROMPT_LAB) {
+                    llmModelHelper.resetConversation(model, model.llmSupportImage, model.llmSupportAudio)
+                }
+
                 llmModelHelper.runInference(
                     model = model,
                     input = text,
@@ -262,6 +354,7 @@ class ChatViewModel @Inject constructor(
                             list.map { if (it.id == assistantId) it.copy(content = "Error: $err", isStreaming = false) else it }
                         }
                     },
+                    images = images,
                     coroutineScope = viewModelScope
                 )
             }

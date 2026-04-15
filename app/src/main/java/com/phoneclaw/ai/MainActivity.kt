@@ -20,11 +20,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.phoneclaw.ai.data.repository.ThemeMode
-import com.phoneclaw.ai.ui.askimage.AskImageScreen
+import com.phoneclaw.ai.ui.chat.ChatMode
 import com.phoneclaw.ai.ui.chat.ChatScreen
 import com.phoneclaw.ai.ui.common.AppNavigationDrawer
 import com.phoneclaw.ai.ui.explore.ExploreScreen
-import com.phoneclaw.ai.ui.promptlab.PromptLabScreen
 import com.phoneclaw.ai.ui.drawer.DrawerViewModel
 import com.phoneclaw.ai.ui.filebrowser.FileBrowserScreen
 import com.phoneclaw.ai.ui.modelpicker.ModelPickerSheet
@@ -132,7 +131,8 @@ private fun MainContent(mainViewModel: MainViewModel) {
                     onOpenPerChatSettings = { id ->
                         activeBottomSheet = BottomSheet.PerChatSettings(id)
                     },
-                    onNavigateToVoice = { navController.navigate("VoiceConversation") }
+                    onNavigateToVoice = { navController.navigate("VoiceConversation") },
+                    initialMode = ChatMode.CHAT,
                 )
             }
             composable("chat/{conversationId}") { backStackEntry ->
@@ -141,40 +141,28 @@ private fun MainContent(mainViewModel: MainViewModel) {
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
                     onOpenPerChatSettings = { activeBottomSheet = BottomSheet.PerChatSettings(id) },
-                    onNavigateToVoice = { navController.navigate("VoiceConversation") }
+                    onNavigateToVoice = { navController.navigate("VoiceConversation") },
+                    initialMode = ChatMode.CHAT,
+                )
+            }
+            composable("chat/mode/{mode}") { backStackEntry ->
+                val modeStr = backStackEntry.arguments?.getString("mode") ?: "CHAT"
+                val mode = runCatching { ChatMode.valueOf(modeStr) }.getOrDefault(ChatMode.CHAT)
+                ChatScreen(
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                    onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
+                    onOpenPerChatSettings = { id -> activeBottomSheet = BottomSheet.PerChatSettings(id) },
+                    onNavigateToVoice = { navController.navigate("VoiceConversation") },
+                    initialMode = mode,
                 )
             }
             composable("explore") {
                 ExploreScreen(
-                    onNavigateToChat = { navController.navigate("chat") },
-                    onNavigateToAgentChat = { navController.navigate("agent_chat") },
-                    onNavigateToAskImage = { navController.navigate("ask_image") },
-                    onNavigateToPromptLab = { navController.navigate("prompt_lab") },
-                    onNavigateToVoice = { navController.navigate("VoiceConversation") },
-                    onOpenDrawer = { scope.launch { drawerState.open() } },
-                )
-            }
-            composable("agent_chat") {
-                ChatScreen(
-                    onOpenDrawer = { scope.launch { drawerState.open() } },
-                    onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
-                    onOpenPerChatSettings = { id ->
-                        activeBottomSheet = BottomSheet.PerChatSettings(id)
+                    onNavigateToChatWithMode = { mode ->
+                        navController.navigate("chat/mode/${mode.name}")
                     },
                     onNavigateToVoice = { navController.navigate("VoiceConversation") },
-                    agentMode = true,
-                )
-            }
-            composable("ask_image") {
-                AskImageScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
-                )
-            }
-            composable("prompt_lab") {
-                PromptLabScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
                 )
             }
             composable("VoiceConversation") {

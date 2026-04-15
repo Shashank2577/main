@@ -20,15 +20,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.phoneclaw.ai.ui.chat.ChatMode
 import com.phoneclaw.ai.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
-    onNavigateToChat: () -> Unit,
-    onNavigateToAgentChat: () -> Unit,
-    onNavigateToAskImage: () -> Unit,
-    onNavigateToPromptLab: () -> Unit,
+    onNavigateToChatWithMode: (ChatMode) -> Unit,
     onNavigateToVoice: () -> Unit,
     onOpenDrawer: () -> Unit,
 ) {
@@ -87,28 +85,28 @@ fun ExploreScreen(
                 iconColor = AccentViolet,
                 title = "AI Chat",
                 description = "Chat with a local AI model",
-                onClick = onNavigateToChat,
+                onClick = { onNavigateToChatWithMode(ChatMode.CHAT) },
             )
             TaskCard(
                 icon = Icons.Outlined.Psychology,
                 iconColor = AccentPink,
                 title = "Agent Skills",
                 description = "Complete tasks using AI agents",
-                onClick = onNavigateToAgentChat,
+                onClick = { onNavigateToChatWithMode(ChatMode.AGENT) },
             )
             TaskCard(
                 icon = Icons.Outlined.Image,
                 iconColor = AccentBlue,
                 title = "Ask Image",
                 description = "Ask questions about images",
-                onClick = onNavigateToAskImage,
+                onClick = { onNavigateToChatWithMode(ChatMode.ASK_IMAGE) },
             )
             TaskCard(
                 icon = Icons.Outlined.Science,
                 iconColor = AccentGreen,
                 title = "Prompt Lab",
                 description = "Single-turn prompt testing",
-                onClick = onNavigateToPromptLab,
+                onClick = { onNavigateToChatWithMode(ChatMode.PROMPT_LAB) },
             )
             TaskCard(
                 icon = Icons.Outlined.Mic,
