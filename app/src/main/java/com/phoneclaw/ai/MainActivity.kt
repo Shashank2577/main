@@ -20,8 +20,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.phoneclaw.ai.data.repository.ThemeMode
+import com.phoneclaw.ai.ui.askimage.AskImageScreen
 import com.phoneclaw.ai.ui.chat.ChatScreen
 import com.phoneclaw.ai.ui.common.AppNavigationDrawer
+import com.phoneclaw.ai.ui.explore.ExploreScreen
+import com.phoneclaw.ai.ui.promptlab.PromptLabScreen
 import com.phoneclaw.ai.ui.drawer.DrawerViewModel
 import com.phoneclaw.ai.ui.filebrowser.FileBrowserScreen
 import com.phoneclaw.ai.ui.modelpicker.ModelPickerSheet
@@ -113,6 +116,10 @@ private fun MainContent(mainViewModel: MainViewModel) {
                     val spaceName = space?.name ?: "Files"
                     navController.navigate("FileBrowser/$spaceId/$spaceName")
                     scope.launch { drawerState.close() }
+                },
+                onExploreClick = {
+                    navController.navigate("explore")
+                    scope.launch { drawerState.close() }
                 }
             )
         }
@@ -135,6 +142,39 @@ private fun MainContent(mainViewModel: MainViewModel) {
                     onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
                     onOpenPerChatSettings = { activeBottomSheet = BottomSheet.PerChatSettings(id) },
                     onNavigateToVoice = { navController.navigate("VoiceConversation") }
+                )
+            }
+            composable("explore") {
+                ExploreScreen(
+                    onNavigateToChat = { navController.navigate("chat") },
+                    onNavigateToAgentChat = { navController.navigate("agent_chat") },
+                    onNavigateToAskImage = { navController.navigate("ask_image") },
+                    onNavigateToPromptLab = { navController.navigate("prompt_lab") },
+                    onNavigateToVoice = { navController.navigate("VoiceConversation") },
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                )
+            }
+            composable("agent_chat") {
+                ChatScreen(
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                    onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
+                    onOpenPerChatSettings = { id ->
+                        activeBottomSheet = BottomSheet.PerChatSettings(id)
+                    },
+                    onNavigateToVoice = { navController.navigate("VoiceConversation") },
+                    agentMode = true,
+                )
+            }
+            composable("ask_image") {
+                AskImageScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
+                )
+            }
+            composable("prompt_lab") {
+                PromptLabScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenModelPicker = { activeBottomSheet = BottomSheet.ModelPicker },
                 )
             }
             composable("VoiceConversation") {

@@ -54,6 +54,9 @@ class ChatViewModel @Inject constructor(
     private var _modelInitialized = false
     private var _initializedModelId: String? = null
 
+    /** When true, tools and constrained decoding are always enabled regardless of skill selection. */
+    var agentMode: Boolean = false
+
     init {
         agentTools.context = context
         agentTools.skillManagerViewModel = skillManagerViewModel
@@ -198,9 +201,9 @@ class ChatViewModel @Inject constructor(
                             coroutineScope = viewModelScope
                         )
                     },
-                    systemInstruction = if (selectedSkills.isEmpty()) null else skillManagerViewModel.getSystemPrompt("You are a helpful AI assistant with access to tools."),
-                    tools = if (selectedSkills.isEmpty()) emptyList() else listOf(tool(agentTools)),
-                    enableConversationConstrainedDecoding = selectedSkills.isNotEmpty(),
+                    systemInstruction = if (agentMode || selectedSkills.isNotEmpty()) skillManagerViewModel.getSystemPrompt("You are a helpful AI assistant with access to tools.") else null,
+                    tools = if (agentMode || selectedSkills.isNotEmpty()) listOf(tool(agentTools)) else emptyList(),
+                    enableConversationConstrainedDecoding = agentMode || selectedSkills.isNotEmpty(),
                     coroutineScope = viewModelScope
                 )
             } else {

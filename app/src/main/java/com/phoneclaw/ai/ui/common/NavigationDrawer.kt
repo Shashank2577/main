@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -35,6 +36,7 @@ fun AppNavigationDrawer(
     onSettingsClick: () -> Unit,
     onVoiceClick: () -> Unit = {},
     onFilesClick: () -> Unit = {},
+    onExploreClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: DrawerViewModel = hiltViewModel()
 ) {
@@ -160,6 +162,7 @@ fun AppNavigationDrawer(
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                FooterIcon(Icons.Outlined.Explore, "Explore", onExploreClick)
                 FooterIcon(Icons.Rounded.Settings, "Settings", onSettingsClick)
                 FooterIcon(Icons.Rounded.Mic, "Voice", onVoiceClick)
                 FooterIcon(Icons.Rounded.FolderOpen, "Files", onFilesClick)

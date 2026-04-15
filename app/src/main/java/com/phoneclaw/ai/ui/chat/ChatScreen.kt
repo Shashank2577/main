@@ -56,8 +56,12 @@ fun ChatScreen(
     onOpenModelPicker: () -> Unit,
     onOpenPerChatSettings: (String) -> Unit = {},
     onNavigateToVoice: () -> Unit = {},
+    agentMode: Boolean = false,
     viewModel: ChatViewModel = hiltViewModel(),
 ) {
+    // Set agent mode on the ViewModel
+    LaunchedEffect(agentMode) { viewModel.agentMode = agentMode }
+
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val isStreaming by viewModel.isStreaming.collectAsStateWithLifecycle()
     val currentModel by viewModel.currentModel.collectAsStateWithLifecycle()
