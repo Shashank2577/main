@@ -126,6 +126,15 @@ class ChatViewModel @Inject constructor(
                     onDone = { error ->
                         if (error.isNotEmpty()) {
                             Log.e("ChatViewModel", "Init error: $error")
+                            _isStreaming.value = false
+                            _messages.update { list ->
+                                list.map {
+                                    if (it.id == assistantId) it.copy(
+                                        content = "Could not load model.\n\nMake sure the model is fully downloaded in the model picker.",
+                                        isStreaming = false
+                                    ) else it
+                                }
+                            }
                             return@initialize
                         }
                         _modelInitialized = true

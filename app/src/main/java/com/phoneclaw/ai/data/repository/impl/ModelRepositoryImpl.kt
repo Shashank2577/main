@@ -50,31 +50,10 @@ class ModelRepositoryImpl @Inject constructor(
                 val allowlist = gson.fromJson(jsonString, ModelAllowlist::class.java)
                 val models = allowlist.models.filter { it.disabled != true }.map { it.toModel().also { m -> m.preProcess() } }
                 
-                // Add cloud models
-                val cloudModels = listOf(
-                    Model(
-                        name = "gemini-2.0-flash",
-                        version = "1.0",
-                        displayName = "Gemini 2.0 Flash",
-                        info = "Fast cloud model.",
-                        url = "",
-                        isLlm = true
-                    ),
-                    Model(
-                        name = "gemini-2.0-pro",
-                        version = "1.0",
-                        displayName = "Gemini 2.0 Pro",
-                        info = "Capable cloud model.",
-                        url = "",
-                        isLlm = true
-                    )
-                )
-                
-                val allModels = models + cloudModels
-                _availableModels.value = allModels
-                
-                // Set initial active model to first available model
-                _activeModel.value = allModels.firstOrNull()
+                _availableModels.value = models
+
+                // Set initial active model to first downloaded model, or first available
+                _activeModel.value = models.firstOrNull { isModelDownloadedSync(it.name) } ?: models.firstOrNull()
                 
                 refreshStatuses()
             } catch (e: Exception) {

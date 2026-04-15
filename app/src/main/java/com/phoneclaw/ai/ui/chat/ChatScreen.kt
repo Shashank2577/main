@@ -442,11 +442,11 @@ private fun ChatTopBar(
 @Composable
 private fun QuickActionChipsRow(onAction: (String) -> Unit) {
     val actions = listOf(
-        "Summarize" to AccentViolet,
-        "Explain" to AccentPink,
-        "Critique" to AccentBlue,
-        "Extend" to AccentGreen,
-        "Simplify" to AccentAmber
+        Triple("Summarize", "Please summarize our conversation so far in a few bullet points.", AccentViolet),
+        Triple("Explain", "Please explain the key concepts in your last response in simple, easy-to-understand terms.", AccentPink),
+        Triple("Critique", "Please critically analyze your last response and identify any weaknesses or gaps.", AccentBlue),
+        Triple("Extend", "Please elaborate further and provide more detail on what you just said.", AccentGreen),
+        Triple("Simplify", "Please rewrite your last response in plain, simple language as if explaining to a beginner.", AccentAmber)
     )
 
     Row(
@@ -455,9 +455,9 @@ private fun QuickActionChipsRow(onAction: (String) -> Unit) {
             .padding(vertical = 10.dp, horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        actions.forEach { (label, color) ->
+        actions.forEach { (label, prompt, color) ->
             Surface(
-                onClick = { onAction(label) },
+                onClick = { onAction(prompt) },
                 shape = RoundedCornerShape(24.dp),
                 color = color,
                 modifier = Modifier.height(32.dp)

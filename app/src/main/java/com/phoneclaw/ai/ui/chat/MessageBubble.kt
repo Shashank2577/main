@@ -136,10 +136,16 @@ private fun AssistantBubble(
 
         // Main Response
         if (message.content.isNotBlank()) {
-            MarkdownText(
-                text = message.content,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Surface(
+                shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
+                color = SurfaceCard,
+                modifier = Modifier.widthIn(max = 320.dp)
+            ) {
+                MarkdownText(
+                    text = message.content,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+            }
         }
 
         if (isStreaming && message.content.isEmpty()) {
