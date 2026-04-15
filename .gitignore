@@ -34,3 +34,4 @@ captures/
 .omc/
 .gallery-ref/
 designs/.omc/
+gradle/gradle-daemon-jvm.properties
