@@ -156,11 +156,12 @@ private fun AssistantBubble(
             ) {
                 Surface(
                     shape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp),
-                    color = SurfaceWhite,
+                    color = SurfaceCard,
                     modifier = Modifier.widthIn(max = 320.dp)
                 ) {
                     MarkdownText(
                         text = message.content,
+                        textColor = ForegroundPrimary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                 }
